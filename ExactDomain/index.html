@@ -1,0 +1,566 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<title>Exact Domain Search</title>
+<style>
+:root{
+  --bg:#070a0f;--panel:#0d141c;--panel2:#101923;--line:#223140;
+  --text:#f3f7fb;--muted:#8fa0b2;--muted2:#66788b;--mint:#7ff1c0;
+  --cyan:#5edfff;--danger:#ff8797;--warn:#ffd37a;--radius:16px
+}
+*{box-sizing:border-box}
+html{background:var(--bg)}
+body{margin:0;min-height:100vh;color:var(--text);background:
+  radial-gradient(circle at 10% 0,rgba(94,223,255,.10),transparent 26%),
+  radial-gradient(circle at 90% 8%,rgba(127,241,192,.08),transparent 22%),var(--bg);
+  font:14px/1.4 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+button,input{font:inherit}
+button{cursor:pointer}
+.app{width:min(1000px,100%);margin:auto;min-height:100vh;padding-bottom:70px}
+.topbar{position:sticky;top:0;z-index:30;background:rgba(7,10,15,.88);backdrop-filter:blur(16px);border-bottom:1px solid rgba(34,49,64,.8);padding:12px 14px 10px}
+.brandrow{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
+.brand{font-weight:900;letter-spacing:-.03em;font-size:18px}.brand b{color:var(--mint)}
+.nav{display:grid;grid-template-columns:1fr 1fr;gap:6px;background:#0b1118;border:1px solid var(--line);padding:4px;border-radius:13px}
+.nav button{border:0;background:transparent;color:var(--muted);font-weight:800;padding:9px;border-radius:9px}
+.nav button.active{background:#16212c;color:var(--text)}
+.badge{display:inline-grid;place-items:center;min-width:22px;height:22px;padding:0 6px;border-radius:999px;background:#172632;color:var(--mint);font-size:11px;margin-left:5px}
+.main{padding:16px 14px}
+.panel{display:none}.panel.active{display:block}
+.hero{margin:5px 0 14px}.hero h1{font-size:clamp(31px,8vw,52px);letter-spacing:-.055em;line-height:1;margin:0 0 8px}.hero p{color:var(--muted);margin:0;max-width:720px}
+.searchbox{padding:7px;background:var(--panel);border:1px solid var(--line);border-radius:16px}
+.mainSearchRow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:7px}
+.searchbox input{border:0;outline:0;background:transparent;color:var(--text);min-width:0;padding:10px 11px;font-size:17px;font-weight:750}
+.searchbox input::placeholder{color:#5c6c7e}
+.orSearch{border-top:1px solid var(--line);margin-top:5px;padding:8px 5px 2px}
+.orLabel{color:var(--muted);font-size:10.5px;font-weight:800;margin:0 5px 6px}
+.orGrid{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:6px;align-items:center}
+.orGrid input{background:#0a1017;border:1px solid #263848;border-radius:10px;padding:9px 10px;font-size:13px;font-weight:750}
+.orWord{color:var(--mint);font-size:10px;font-weight:950;text-align:center}
+.criteria{color:var(--mint);font-size:10.5px;font-weight:800;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.primary{border:0;border-radius:11px;background:linear-gradient(135deg,var(--mint),var(--cyan));color:#061016;font-weight:900;padding:0 16px;min-height:43px}
+.secondary{border:1px solid #2c4051;border-radius:10px;background:#101923;color:#dce7ef;font-weight:800;padding:9px 12px}
+.danger{border-color:#5b3139;color:#ffb5c0}
+.searchhint{display:flex;justify-content:space-between;gap:8px;align-items:center;color:var(--muted2);font-size:11px;padding:8px 3px 0;flex-wrap:wrap}
+.countrySearch{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:10px 2px 0;padding:9px 10px;border:1px solid var(--line);background:rgba(13,20,28,.72);border-radius:11px}.countrySearch label{display:flex;align-items:center;gap:8px;font-weight:850;color:#dfe9f2}.countrySearch input{width:18px;height:18px;accent-color:var(--mint)}.countrySearch small{color:var(--muted);font-size:10.5px}
+.filterbar{display:flex;align-items:center;justify-content:flex-end;gap:8px;margin:7px 0 9px}.filterbar label{color:var(--muted);font-size:11px;font-weight:800}.filterbar select{border:1px solid #2c4051;background:#101923;color:#e7f0f7;border-radius:9px;padding:7px 28px 7px 9px;font-weight:850;max-width:210px}
+.existing{color:var(--mint);font-weight:800}
+.status{display:none;margin:14px 0 10px;border:1px solid var(--line);background:rgba(13,20,28,.88);border-radius:13px;padding:11px 12px}
+.status.show{display:block}.statusline{display:flex;gap:9px;align-items:center;justify-content:space-between}.status strong{font-size:13px}.meta{color:var(--muted);font-size:11px;margin-top:4px}.spinner{width:13px;height:13px;border:2px solid #334758;border-top-color:var(--mint);border-radius:50%;animation:spin .8s linear infinite;display:inline-block;vertical-align:-2px;margin-right:6px}@keyframes spin{to{transform:rotate(360deg)}}
+.toolbar{display:flex;gap:7px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin:13px 0 8px}.topicTitle{min-width:0}.topicTitle strong{display:block;font-size:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:70vw}.topicTitle span{color:var(--muted);font-size:11px}.toolbuttons{display:flex;gap:6px}
+.pager{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:8px 0}.pager span{font-size:11px;color:var(--muted)}.pager button{border:1px solid var(--line);background:#0e1620;color:var(--text);border-radius:9px;padding:7px 10px;font-weight:800}.pager button:disabled{opacity:.35}
+.results{display:grid;gap:6px}
+.result{display:grid;grid-template-columns:31px minmax(0,1fr) 34px;gap:9px;align-items:center;border:1px solid var(--line);background:linear-gradient(180deg,#101923,#0c131b);border-radius:12px;padding:8px 9px;min-height:58px}
+.rank{width:29px;height:29px;border:1px solid #294151;border-radius:9px;display:grid;place-items:center;color:var(--mint);font-weight:900;font-size:11px;font-variant-numeric:tabular-nums}.resultMain{min-width:0}.domain{font-weight:900;color:#e5eef6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px}.rtitle{color:#94a7b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11.5px;margin-top:2px}.open{width:34px;height:34px;display:grid;place-items:center;border:1px solid #294151;border-radius:9px;color:var(--cyan);text-decoration:none;font-size:16px;font-weight:900}.newmark{color:var(--mint);font-size:9px;font-weight:900;margin-left:5px}
+.empty{border:1px dashed var(--line);border-radius:13px;color:var(--muted);padding:25px;text-align:center;margin-top:10px}
+.err{display:none;border:1px solid #593039;background:#1a1015;color:#ffc2cb;padding:12px;border-radius:12px;margin:10px 0}.err.show{display:block}
+.foundHead{display:flex;justify-content:space-between;align-items:end;gap:12px;margin:5px 0 12px}.foundHead h2{font-size:29px;letter-spacing:-.04em;margin:0}.foundHead p{color:var(--muted);margin:3px 0 0;font-size:12px}
+.topicList{display:grid;gap:7px;margin-bottom:16px}.topicRow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;border:1px solid var(--line);background:var(--panel);border-radius:12px;padding:10px 11px}.topicQuery{font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.topicMeta{font-size:10.5px;color:var(--muted);margin-top:2px}.topicActions{display:flex;gap:6px}.topicActions button{border:1px solid #294151;background:#111b25;color:#dfe9f2;border-radius:9px;padding:7px 10px;font-weight:800}.topicActions .count{color:var(--mint);font-size:12px;min-width:34px;text-align:center;padding-top:8px;font-weight:900}
+.foundViewer{border-top:1px solid var(--line);padding-top:11px}.foundViewer.hidden{display:none}
+.storageNote{color:var(--muted2);font-size:10.5px;margin:18px 2px 0}.storageActions{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}.storageActions input{display:none}
+.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(20px);opacity:0;pointer-events:none;background:#17232e;border:1px solid #2a4051;color:#eef6fb;padding:9px 13px;border-radius:999px;font-weight:800;font-size:11px;transition:.18s;z-index:99}.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+@media(max-width:640px){
+  .main{padding:13px 10px}.topbar{padding:10px}.hero h1{font-size:35px}.hero p{font-size:12px}.mainSearchRow{grid-template-columns:1fr}.primary{width:100%}.orGrid{grid-template-columns:1fr auto 1fr}.orGrid input{min-width:0}.toolbar{align-items:flex-end}.toolbuttons{width:100%}.toolbuttons button{flex:1}.result{min-height:54px;padding:7px 8px}.foundHead{align-items:flex-start;flex-direction:column}.topicRow{padding:9px}.topicActions button{padding:6px 9px}.countrySearch{align-items:flex-start;flex-direction:column}.filterbar{justify-content:space-between}.filterbar select{flex:1;max-width:none}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brandrow"><div class="brand">Exact<b>Domain</b></div><div id="globalCount" style="color:var(--muted);font-size:11px">0 saved</div></div>
+    <nav class="nav">
+      <button id="tabSearch" class="active" type="button">Search</button>
+      <button id="tabFound" type="button">Found <span id="topicBadge" class="badge">0</span></button>
+    </nav>
+  </header>
+
+  <main class="main">
+    <section id="searchPanel" class="panel active">
+      <div class="hero">
+        <h1>Search deeper.<br>Keep every domain.</h1>
+        <p>Exact main phrase, optional OR text filters, deep pagination, one saved result per domain, and repeat searches continue the same topic.</p>
+      </div>
+
+      <form id="searchForm" class="searchbox">
+        <div class="mainSearchRow">
+          <input id="query" type="text" autocomplete="off" spellcheck="false" placeholder="On Cloud 5" aria-label="Main exact text">
+          <button id="searchBtn" class="primary" type="submit">Search deep</button>
+        </div>
+        <div class="orSearch">
+          <div class="orLabel">Page must also contain at least one of these exact texts (optional):</div>
+          <div class="orGrid">
+            <input id="anyText1" type="text" autocomplete="off" spellcheck="false" placeholder="Woman" aria-label="Additional exact text 1">
+            <span class="orWord">OR</span>
+            <input id="anyText2" type="text" autocomplete="off" spellcheck="false" placeholder="Women" aria-label="Additional exact text 2">
+          </div>
+        </div>
+      </form>
+      <div class="searchhint">
+        <span id="existingHint">New searches create a saved topic automatically.</span>
+        <span>Main text AND (extra 1 OR extra 2) • unique domains</span>
+      </div>
+      <div class="countrySearch">
+        <label><input id="usSearchOnly" type="checkbox"> 🇺🇸 Search US-focused sites only</label>
+        <small>Uses U.S. Google results and state-by-state searches; skips obvious foreign country domains.</small>
+      </div>
+
+      <div id="status" class="status" aria-live="polite">
+        <div class="statusline"><strong id="statusMain"><span class="spinner"></span>Searching…</strong><button id="stopBtn" class="secondary" type="button">Stop</button></div>
+        <div id="statusMeta" class="meta"></div>
+      </div>
+      <div id="errorBox" class="err"></div>
+
+      <div id="searchViewer" style="display:none">
+        <div class="toolbar">
+          <div class="topicTitle"><strong id="searchTopicTitle"></strong><span id="searchTopicMeta"></span></div>
+          <div class="toolbuttons"><button id="searchPrev" class="secondary" type="button">← Prev</button><button id="searchNext" class="secondary" type="button">Next →</button></div>
+        </div>
+        <div class="pager"><span id="searchPageInfo"></span><span id="searchRunInfo"></span></div>
+        <div class="filterbar"><label for="searchCountryFilter">Country filter</label><select id="searchCountryFilter"><option value="all">All countries</option><option value="us">🇺🇸 US-focused</option><option value="us-tld">🇺🇸 .us only (strict)</option></select></div>
+        <div id="searchResults" class="results"></div>
+      </div>
+      <div id="searchEmpty" class="empty" style="display:none">No domains saved for this topic yet.</div>
+    </section>
+
+    <section id="foundPanel" class="panel">
+      <div class="foundHead">
+        <div><h2>Found</h2><p>Saved by search topic on this phone/browser.</p></div>
+        <div class="storageActions">
+          <button id="exportLinksBtn" class="secondary" type="button">Export all links CSV</button>
+          <button id="exportBtn" class="secondary" type="button">Export backup</button>
+          <label class="secondary" for="importFile" style="cursor:pointer">Import backup</label>
+          <input id="importFile" type="file" accept="application/json,.json">
+        </div>
+      </div>
+      <div id="topicList" class="topicList"></div>
+      <div id="foundViewer" class="foundViewer hidden">
+        <div class="toolbar">
+          <div class="topicTitle"><strong id="foundTopicTitle"></strong><span id="foundTopicMeta"></span></div>
+          <div class="toolbuttons"><button id="continueBtn" class="secondary" type="button">Continue search</button><button id="exportTopicBtn" class="secondary" type="button">Export CSV</button><button id="deleteTopicBtn" class="secondary danger" type="button">Delete</button></div>
+        </div>
+        <div class="filterbar"><label for="foundCountryFilter">Country filter</label><select id="foundCountryFilter"><option value="all">All countries</option><option value="us">🇺🇸 US-focused</option><option value="us-tld">🇺🇸 .us only (strict)</option></select></div>
+        <div class="pager"><button id="foundPrev" type="button">← Prev</button><span id="foundPageInfo"></span><button id="foundNext" type="button">Next →</button></div>
+        <div id="foundResults" class="results"></div>
+      </div>
+      <div class="storageNote">Your saved topics live in browser storage. “Export all links CSV” gives you a simple spreadsheet with each domain and its direct page link. Export a backup before clearing browser data or moving devices.</div>
+    </section>
+  </main>
+</div>
+<div id="toast" class="toast"></div>
+
+<script>
+(() => {
+'use strict';
+
+const API_KEY_STORAGE = 'exactDomainSearch.serperKey';
+function getApiKey(){
+  let key = (localStorage.getItem(API_KEY_STORAGE) || '').trim();
+  if(!key){
+    key = (prompt('Enter your Serper API key. It will be saved only in this browser.') || '').trim();
+    if(!key) throw new Error('A Serper API key is required to search.');
+    localStorage.setItem(API_KEY_STORAGE, key);
+  }
+  return key;
+}
+const SEARCH_URL = 'https://google.serper.dev/search';
+const STORAGE_KEY = 'exactDomainSearch.v4';
+const RESULTS_PER_VIEW = 100;
+const REQUESTS_PER_RUN = 100;
+const MAX_EMPTY_CALLS = 25;
+const MAX_QUERY_LENGTH = 1200;
+const COUNTRY_LANES = ['us','gb','ca','au','nz','ie','de','fr','nl','be','ch','at','se','no','dk','fi','es','it','pt','pl','cz','ro','gr','tr','ae','za','in','sg','my','ph','hk','tw','jp','kr','mx','br','ar','cl'];
+const TLD_LANES = ['com','net','org','co','us','ca','uk','au','de','fr','nl','ie','nz','in','jp','sg','za','mx','br','es','it','se','no','dk','ch','at','be','pl','cz','pt','tr','ae','ph','my','hk','tw','kr','shop','store','io','ai','dev','app','me','biz','info'];
+const US_STATES = ['Alabama','Alaska','Arizona','Arkansas','California','Colorado','Connecticut','Delaware','Florida','Georgia','Hawaii','Idaho','Illinois','Indiana','Iowa','Kansas','Kentucky','Louisiana','Maine','Maryland','Massachusetts','Michigan','Minnesota','Mississippi','Missouri','Montana','Nebraska','Nevada','New Hampshire','New Jersey','New Mexico','New York','North Carolina','North Dakota','Ohio','Oklahoma','Oregon','Pennsylvania','Rhode Island','South Carolina','South Dakota','Tennessee','Texas','Utah','Vermont','Virginia','Washington','West Virginia','Wisconsin','Wyoming','District of Columbia'];
+const FOREIGN_CC = new Set(['ca','uk','au','nz','de','fr','nl','be','ch','at','se','no','dk','fi','es','it','pt','pl','cz','ro','gr','tr','ae','za','in','sg','my','ph','hk','tw','jp','kr','mx','br','ar','cl','cn','ru','ua','ie','is','il','sa','pk','bd','lk','vn','th','id','ng','gh','ke','ug']);
+
+const $ = id => document.getElementById(id);
+const els = {
+  tabSearch:$('tabSearch'),tabFound:$('tabFound'),searchPanel:$('searchPanel'),foundPanel:$('foundPanel'),
+  form:$('searchForm'),query:$('query'),anyText1:$('anyText1'),anyText2:$('anyText2'),searchBtn:$('searchBtn'),stopBtn:$('stopBtn'),status:$('status'),statusMain:$('statusMain'),statusMeta:$('statusMeta'),errorBox:$('errorBox'),existingHint:$('existingHint'),usSearchOnly:$('usSearchOnly'),
+  searchViewer:$('searchViewer'),searchTopicTitle:$('searchTopicTitle'),searchTopicMeta:$('searchTopicMeta'),searchPageInfo:$('searchPageInfo'),searchRunInfo:$('searchRunInfo'),searchResults:$('searchResults'),searchPrev:$('searchPrev'),searchNext:$('searchNext'),searchEmpty:$('searchEmpty'),searchCountryFilter:$('searchCountryFilter'),
+  topicList:$('topicList'),topicBadge:$('topicBadge'),globalCount:$('globalCount'),foundViewer:$('foundViewer'),foundTopicTitle:$('foundTopicTitle'),foundTopicMeta:$('foundTopicMeta'),foundPageInfo:$('foundPageInfo'),foundResults:$('foundResults'),foundPrev:$('foundPrev'),foundNext:$('foundNext'),continueBtn:$('continueBtn'),exportTopicBtn:$('exportTopicBtn'),deleteTopicBtn:$('deleteTopicBtn'),foundCountryFilter:$('foundCountryFilter'),
+  exportLinksBtn:$('exportLinksBtn'),exportBtn:$('exportBtn'),importFile:$('importFile'),toast:$('toast')
+};
+
+let db = loadDB();
+let controller = null;
+let stopped = false;
+let currentTopicId = null;
+let foundTopicId = null;
+let searchPage = 1;
+let foundPage = 1;
+let newDomainsThisRun = new Set();
+let countryFilter = db.settings?.countryFilter || 'all';
+
+function emptyDB(){ return {version:4, topics:{}, settings:{countryFilter:'all',usSearchOnly:false}}; }
+function loadDB(){
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return emptyDB();
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object' || !parsed.topics) return emptyDB();
+    parsed.settings = parsed.settings || {countryFilter:'all',usSearchOnly:false};
+    if(!['all','us','us-tld'].includes(parsed.settings.countryFilter)) parsed.settings.countryFilter='all';
+    for (const t of Object.values(parsed.topics)) {
+      if(t && !Array.isArray(t.anyTerms)) t.anyTerms=[];
+      if(t && !t.state) t.state={cursor:0,usCursor:0,totalCalls:0,totalRuns:0,lastStrategy:'',lastPage:0,operatorRestricted:false};
+      if(t?.state && typeof t.state.usCursor!=='number') t.state.usCursor=0;
+    }
+    return parsed;
+  } catch { return emptyDB(); }
+}
+function saveDB(){
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(db)); }
+  catch (e) { showError('Browser storage is full or unavailable. Export a backup, then remove old topics if needed.'); }
+  updateGlobalCounts();
+}
+function normalizeQuery(q){ return q.trim().replace(/^['"]+|['"]+$/g,'').replace(/\s+/g,' ').toLocaleLowerCase(); }
+function cleanTerm(v){ return String(v||'').trim().replace(/^['"]+|['"]+$/g,'').replace(/\s+/g,' '); }
+function normalizeAnyTerms(terms=[]){ return [...new Set(terms.map(cleanTerm).filter(Boolean).map(v=>v.toLocaleLowerCase()))].sort(); }
+function displayAnyTerms(topic){ return Array.isArray(topic?.anyTerms)?topic.anyTerms.filter(Boolean):[]; }
+function topicIdFrom(q, terms=[]){
+  const n = normalizeQuery(q);
+  const extras = normalizeAnyTerms(terms);
+  const key = extras.length ? `${n}\nOR:${extras.join('|')}` : n;
+  let h = 2166136261;
+  for (let i=0;i<key.length;i++){ h ^= key.charCodeAt(i); h = Math.imul(h,16777619); }
+  return 't'+(h>>>0).toString(36);
+}
+function ensureTopic(query, anyTerms=[]){
+  const clean = cleanTerm(query);
+  const cleanedTerms=[]; const seenTerms=new Set(); for(const raw of anyTerms){ const v=cleanTerm(raw); const k=v.toLocaleLowerCase(); if(v&&!seenTerms.has(k)){seenTerms.add(k);cleanedTerms.push(v);} }
+  const id = topicIdFrom(clean, cleanedTerms);
+  if (!db.topics[id]) {
+    db.topics[id] = {
+      id, query:clean, normalized:normalizeQuery(clean), anyTerms:cleanedTerms, createdAt:Date.now(), updatedAt:Date.now(),
+      results:[], state:{cursor:0,usCursor:0,totalCalls:0,totalRuns:0,lastStrategy:'',lastPage:0,operatorRestricted:false}
+    };
+    saveDB();
+  } else if(!Array.isArray(db.topics[id].anyTerms)) {
+    db.topics[id].anyTerms=cleanedTerms;
+  }
+  return db.topics[id];
+}
+function allTopics(){ return Object.values(db.topics).sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0)); }
+function esc(v=''){ return String(v).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c])); }
+function fmtDate(ts){ if(!ts)return ''; try{return new Date(ts).toLocaleString([], {month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});}catch{return '';} }
+function toast(msg){ els.toast.textContent=msg; els.toast.classList.add('show'); clearTimeout(toast.t); toast.t=setTimeout(()=>els.toast.classList.remove('show'),1800); }
+function showError(msg){ els.errorBox.textContent=msg; els.errorBox.classList.add('show'); }
+function clearError(){ els.errorBox.classList.remove('show'); els.errorBox.textContent=''; }
+
+const secondLevel = new Set([
+  'co.uk','org.uk','me.uk','ac.uk','gov.uk','net.uk','sch.uk','ltd.uk','plc.uk',
+  'com.au','net.au','org.au','edu.au','gov.au','asn.au','id.au',
+  'co.nz','net.nz','org.nz','govt.nz','ac.nz','school.nz',
+  'co.jp','ne.jp','or.jp','ac.jp','go.jp','co.kr','or.kr','go.kr','ac.kr',
+  'com.br','net.br','org.br','com.mx','com.ar','com.tr','com.sg','com.my','com.hk','com.tw','com.cn','com.ph','com.pk',
+  'co.in','firm.in','net.in','org.in','gen.in','ind.in','co.za','org.za','net.za','web.za','com.ng','com.gh','co.ke','co.ug',
+  'com.ua','com.pl','com.de','com.fr','com.es','com.it','com.nl','co.il','com.sa','com.ae'
+]);
+function domainOf(url){
+  try {
+    let host = new URL(url).hostname.toLowerCase().replace(/^www\d*\./,'');
+    if (!host) return '';
+    if (/^\d+\.\d+\.\d+\.\d+$/.test(host) || host==='localhost') return host;
+    const p=host.split('.').filter(Boolean); if(p.length<=2)return host;
+    const l2=p.slice(-2).join('.'); if(secondLevel.has(l2)&&p.length>=3)return p.slice(-3).join('.');
+    return p.slice(-2).join('.');
+  } catch { return ''; }
+}
+function tldOf(domain){ const p=String(domain||'').toLowerCase().split('.').filter(Boolean); return p.length?p[p.length-1]:''; }
+function isUSFocusedDomain(domain){
+  const tld=tldOf(domain);
+  if(!tld) return false;
+  if(tld==='us') return true;
+  // Keep generic/global domains (.com, .org, .net, .co, .io, etc.) and remove obvious foreign country-code domains.
+  return !FOREIGN_CC.has(tld);
+}
+function filteredResults(topic){
+  const rows=topic?.results||[];
+  if(countryFilter==='us-tld') return rows.filter(r=>tldOf(r.domain)==='us');
+  if(countryFilter==='us') return rows.filter(r=>r.usFocused===true || (r.usFocused!==false && isUSFocusedDomain(r.domain)));
+  return rows;
+}
+function quoted(q){ return `"${q.replace(/"/g,'')}"`; }
+function criteriaText(topic){ const terms=displayAnyTerms(topic); return terms.length ? `${terms.map(t=>`"${t}"`).join(' OR ')}` : ''; }
+function queryBaseFor(topic, rawCursor=0){
+  const terms=displayAnyTerms(topic);
+  if(!terms.length) return {base:quoted(topic.query), term:'', laneCursor:rawCursor};
+  const term=terms[rawCursor % terms.length];
+  const laneCursor=Math.floor(rawCursor / terms.length);
+  return {base:`${quoted(topic.query)} ${quoted(term)}`, term, laneCursor};
+}
+function exclusionSlice(topic, seed, maxDomains=10, maxChars=650){
+  const domains = topic.results.map(r=>r.domain).filter(Boolean);
+  if (!domains.length) return '';
+  const chosen=[]; let chars=0;
+  const start = seed % domains.length;
+  for(let i=0;i<domains.length && chosen.length<maxDomains;i++){
+    const d=domains[(start+i)%domains.length];
+    const token=` -site:${d}`;
+    if(chars+token.length>maxChars)break;
+    chosen.push(token); chars+=token.length;
+  }
+  return chosen.join('');
+}
+function buildPlan(topic, usOnly=false){
+  const rawCursor = usOnly ? (topic.state.usCursor || 0) : (topic.state.cursor || 0);
+  const qb=queryBaseFor(topic, rawCursor);
+  const c = qb.laneCursor;
+  const base = qb.base;
+  const termSuffix = qb.term ? ` • ${qb.term}` : '';
+  const operatorRestricted = !!topic.state.operatorRestricted;
+
+  if(usOnly){
+    // First exhaust deep U.S. Google pages, then fan out state-by-state without foreign country lanes.
+    if(c < 30) return {q:base,page:c+1,gl:'us',label:`US exact page ${c+1}${termSuffix}`,usesOperators:false,usFocused:true};
+    const n=c-30;
+    const state=US_STATES[Math.floor(n/5)%US_STATES.length];
+    const page=1+(n%5);
+    return {q:`${base} "${state}"`,page,gl:'us',label:`US • ${state} • page ${page}${termSuffix}`,usesOperators:false,usFocused:true};
+  }
+
+  // First 20 calls are straightforward Google pages for the quoted phrase.
+  if (c < 20) return {q:base,page:c+1,gl:'us',label:`US exact page ${c+1}${termSuffix}`,usesOperators:false};
+
+  const n = c - 20;
+  const mode = n % 4;
+  const cycle = Math.floor(n / 4);
+  const gl = COUNTRY_LANES[cycle % COUNTRY_LANES.length];
+  const depth = 1 + (Math.floor(cycle / COUNTRY_LANES.length) % 10);
+
+  // Different Google country indexes surface different corners of the web.
+  if (mode === 0 || operatorRestricted) {
+    return {q:base,page:depth,gl,label:`${gl.toUpperCase()} exact page ${depth}${termSuffix}`,usesOperators:false};
+  }
+
+  // TLD lanes help surface sites that are buried behind the same large domains.
+  if (mode === 1) {
+    const tld = TLD_LANES[cycle % TLD_LANES.length];
+    const tldDepth = 1 + (Math.floor(cycle / TLD_LANES.length) % 8);
+    return {q:`${base} site:.${tld}`,page:tldDepth,gl,label:`.${tld} page ${tldDepth}${termSuffix}`,usesOperators:true};
+  }
+
+  // Re-query while excluding a rotating handful of domains we already saved.
+  if (mode === 2 && topic.results.length) {
+    const ex = exclusionSlice(topic, cycle*13, 10, 650);
+    let q = base + ex;
+    if(q.length > MAX_QUERY_LENGTH) q = base;
+    return {q,page:1 + (cycle % 3),gl,label:`new-domain sweep ${cycle+1}${termSuffix}`,usesOperators:!!ex};
+  }
+
+  // A second locale pass keeps progress moving even if operators are limited.
+  const gl2 = COUNTRY_LANES[(cycle*7 + 3) % COUNTRY_LANES.length];
+  return {q:base,page:1 + ((cycle*3) % 10),gl:gl2,label:`${gl2.toUpperCase()} alternate page${termSuffix}`,usesOperators:false};
+}
+
+async function searchAPI(body, signal){
+  let res;
+  try {
+    res = await fetch(SEARCH_URL,{method:'POST',mode:'cors',headers:{'X-API-KEY':getApiKey(),'Content-Type':'application/json'},body:JSON.stringify(body),signal});
+  } catch(e){ if(e.name==='AbortError')throw e; throw new Error('Your browser could not reach Serper. Check internet access and try again.'); }
+  const txt=await res.text(); let data={}; try{data=txt?JSON.parse(txt):{};}catch{data={raw:txt};}
+  if(!res.ok) throw new Error(data.message||data.error||data.raw||`Serper HTTP ${res.status}`);
+  return data;
+}
+
+function addOrganic(topic, organic, plan, usOnly=false){
+  const known = new Set(topic.results.map(r=>r.domain));
+  let added=0;
+  for(const item of organic){
+    if(!item || !item.link)continue;
+    const domain=domainOf(item.link); if(!domain || known.has(domain))continue;
+    const usFocused=isUSFocusedDomain(domain);
+    if(usOnly && !usFocused) continue;
+    known.add(domain);
+    topic.results.push({domain,url:item.link,title:item.title||'',snippet:item.snippet||'',foundAt:Date.now(),sourceGl:plan?.gl||'',usFocused});
+    newDomainsThisRun.add(domain); added++;
+  }
+  if(added){ topic.updatedAt=Date.now(); }
+  return added;
+}
+
+async function runSearch(query, anyTerms=[]){
+  clearError();
+  const topic=ensureTopic(query, anyTerms); currentTopicId=topic.id; foundTopicId=topic.id; searchPage=1; newDomainsThisRun=new Set();
+  els.query.value=topic.query; els.anyText1.value=topic.anyTerms?.[0]||''; els.anyText2.value=topic.anyTerms?.[1]||''; renderSearchTopic(); renderTopics(); updateExistingHint();
+  if(controller)controller.abort(); controller=new AbortController(); stopped=false;
+  topic.state.totalRuns=(topic.state.totalRuns||0)+1; saveDB();
+  els.status.classList.add('show'); els.searchBtn.disabled=true; els.searchBtn.textContent='Searching…'; els.statusMain.innerHTML='<span class="spinner"></span>Deep searching';
+  const usOnly=!!els.usSearchOnly.checked;
+  db.settings=db.settings||{}; db.settings.usSearchOnly=usOnly; saveDB();
+  let emptyCalls=0, calls=0, addedTotal=0, skippedPatterns=0;
+  try {
+    while(!stopped && calls<REQUESTS_PER_RUN && emptyCalls<MAX_EMPTY_CALLS){
+      const plan=buildPlan(topic,usOnly);
+      els.statusMeta.textContent=`${topic.results.length} domains saved • request ${calls+1}/${REQUESTS_PER_RUN} • ${plan.label}`;
+      let data;
+      try {
+        // Serper free accounts reject many operator-style queries when num > 10.
+        // Keep num at 10 and omit unsupported "verbatim" tbs flags.
+        data=await searchAPI({q:plan.q,gl:plan.gl||'us',hl:'en',num:10,page:plan.page,autocorrect:false},controller.signal);
+      } catch(e) {
+        const msg=String(e.message||e);
+        if(plan.usesOperators && /query pattern not allowed/i.test(msg)){
+          topic.state.operatorRestricted=true;
+          if(usOnly) topic.state.usCursor=(topic.state.usCursor||0)+1; else topic.state.cursor=(topic.state.cursor||0)+1;
+          skippedPatterns++;
+          saveDB();
+          continue;
+        }
+        throw e;
+      }
+      calls++; topic.state.totalCalls=(topic.state.totalCalls||0)+1; topic.state.lastStrategy=plan.label; topic.state.lastPage=plan.page; if(usOnly) topic.state.usCursor=(topic.state.usCursor||0)+1; else topic.state.cursor=(topic.state.cursor||0)+1;
+      const organic=Array.isArray(data.organic)?data.organic:[];
+      const added=addOrganic(topic,organic,plan,usOnly); addedTotal+=added;
+      emptyCalls = organic.length===0 ? emptyCalls+1 : 0;
+      topic.updatedAt=Date.now(); saveDB(); renderSearchTopic(); renderTopics();
+      els.statusMeta.textContent=`${topic.results.length} domains saved • +${addedTotal} this run • ${calls}/${REQUESTS_PER_RUN} requests${usOnly?' • 🇺🇸 US-focused':''}${skippedPatterns?` • ${skippedPatterns} restricted patterns skipped`:''}`;
+      await new Promise(r=>setTimeout(r,110));
+    }
+    if(stopped) els.statusMain.textContent='Stopped';
+    else if(calls>=REQUESTS_PER_RUN) els.statusMain.textContent='Search pass finished — run again to go deeper';
+    else if(emptyCalls>=MAX_EMPTY_CALLS) els.statusMain.textContent='Paused after many empty pages — run again to continue';
+    else els.statusMain.textContent='Search pass finished';
+    els.statusMeta.textContent=`${topic.results.length} unique domains saved • +${addedTotal} new • ${calls} Serper request${calls===1?'':'s'} this pass`;
+    if(addedTotal) toast(`+${addedTotal} new domain${addedTotal===1?'':'s'}`);
+  } catch(e){
+    if(e.name==='AbortError' && stopped){ els.statusMain.textContent='Stopped'; }
+    else if(e.name!=='AbortError'){
+      els.statusMain.textContent='Search error';
+      let msg=e.message||String(e);
+      if(/query pattern not allowed/i.test(msg)) msg='Serper rejected this query pattern on the free account. This fixed version uses 10 results per request; try the search again.';
+      showError(msg);
+    }
+  } finally {
+    els.searchBtn.disabled=false; els.searchBtn.textContent=topic.results.length?'Search 100 more pages':'Search deep'; saveDB(); renderSearchTopic(); renderTopics();
+  }
+}
+
+function renderResultList(container, topic, page, pageInfoEl, prevBtn, nextBtn){
+  container.innerHTML='';
+  if(!topic || !topic.results.length){ pageInfoEl.textContent='0 results'; prevBtn.disabled=true; nextBtn.disabled=true; return 1; }
+  const rows=filteredResults(topic);
+  if(!rows.length){
+    const label=countryFilter==='us-tld'?'.us':'US-focused';
+    pageInfoEl.textContent=`0 ${label} results • ${topic.results.length} total`; prevBtn.disabled=true; nextBtn.disabled=true;
+    container.innerHTML=`<div class="empty">No ${label} domains in this saved topic yet.</div>`; return 1;
+  }
+  const pages=Math.max(1,Math.ceil(rows.length/RESULTS_PER_VIEW)); page=Math.min(Math.max(1,page),pages);
+  const start=(page-1)*RESULTS_PER_VIEW, slice=rows.slice(start,start+RESULTS_PER_VIEW);
+  container.innerHTML=slice.map((r,i)=>`<article class="result">
+    <div class="rank">${start+i+1}</div>
+    <div class="resultMain"><div class="domain">${esc(r.domain)}${newDomainsThisRun.has(r.domain)?'<span class="newmark">NEW</span>':''}</div><div class="rtitle">${esc(r.title||r.url)}</div></div>
+    <a class="open" href="${esc(r.url)}" target="_blank" rel="noopener noreferrer" aria-label="Open ${esc(r.domain)}">↗</a>
+  </article>`).join('');
+  const suffix=countryFilter==='all'?'':` • ${topic.results.length} total`;
+  pageInfoEl.textContent=`${start+1}–${Math.min(start+RESULTS_PER_VIEW,rows.length)} of ${rows.length}${suffix} • page ${page}/${pages}`;
+  prevBtn.disabled=page<=1; nextBtn.disabled=page>=pages; return page;
+}
+function renderSearchTopic(){
+  const topic=db.topics[currentTopicId];
+  if(!topic){els.searchViewer.style.display='none';els.searchEmpty.style.display='none';return;}
+  els.searchViewer.style.display='block'; els.searchEmpty.style.display=topic.results.length?'none':'block';
+  const shown=filteredResults(topic).length;
+  els.searchTopicTitle.textContent=topic.query; const cText=criteriaText(topic); els.searchTopicMeta.textContent=(cText?`Must also contain: ${cText} • `:'')+`${countryFilter==='all'?topic.results.length:`${shown} shown • ${topic.results.length} total`} domains • ${topic.state.totalCalls||0} lifetime API requests • last ${fmtDate(topic.updatedAt)}`;
+  els.searchRunInfo.textContent=newDomainsThisRun.size?`+${newDomainsThisRun.size} new this run`:'';
+  searchPage=renderResultList(els.searchResults,topic,searchPage,els.searchPageInfo,els.searchPrev,els.searchNext);
+  els.searchBtn.textContent=topic.results.length?'Search 100 more pages':'Search deep';
+}
+function renderFoundViewer(){
+  const topic=db.topics[foundTopicId];
+  if(!topic){els.foundViewer.classList.add('hidden');return;}
+  const shown=filteredResults(topic).length;
+  els.foundViewer.classList.remove('hidden'); els.foundTopicTitle.textContent=topic.query; const cText=criteriaText(topic); els.foundTopicMeta.textContent=(cText?`Must also contain: ${cText} • `:'')+`${countryFilter==='all'?topic.results.length:`${shown} shown • ${topic.results.length} total`} domains • ${topic.state.totalCalls||0} API requests • updated ${fmtDate(topic.updatedAt)}`;
+  foundPage=renderResultList(els.foundResults,topic,foundPage,els.foundPageInfo,els.foundPrev,els.foundNext);
+}
+function renderTopics(){
+  const topics=allTopics();
+  if(!topics.length){ els.topicList.innerHTML='<div class="empty">Your saved search topics will appear here.</div>'; els.foundViewer.classList.add('hidden'); updateGlobalCounts(); return; }
+  els.topicList.innerHTML=topics.map(t=>{ const c=criteriaText(t); return `<div class="topicRow" data-id="${esc(t.id)}">
+    <div><div class="topicQuery">${esc(t.query)}</div>${c?`<div class="criteria">+ ${esc(c)}</div>`:''}<div class="topicMeta">${t.results.length} domains • ${t.state.totalCalls||0} searches • ${fmtDate(t.updatedAt)}</div></div>
+    <div class="topicActions"><span class="count">${t.results.length}</span><button type="button" data-open="${esc(t.id)}">Open</button></div>
+  </div>`;}).join('');
+  els.topicList.querySelectorAll('[data-open]').forEach(b=>b.addEventListener('click',()=>{foundTopicId=b.dataset.open;foundPage=1;renderFoundViewer();}));
+  if(!foundTopicId || !db.topics[foundTopicId]) foundTopicId=topics[0].id;
+  renderFoundViewer(); updateGlobalCounts();
+}
+function updateGlobalCounts(){
+  const topics=allTopics(); const total=topics.reduce((s,t)=>s+t.results.length,0);
+  els.topicBadge.textContent=topics.length; els.globalCount.textContent=`${total} saved`;
+}
+function updateExistingHint(){
+  const q=els.query.value.trim(); if(!q){els.existingHint.textContent='New searches create a saved topic automatically.';els.existingHint.className='';return;}
+  const terms=[els.anyText1.value,els.anyText2.value].map(cleanTerm).filter(Boolean);
+  const id=topicIdFrom(q,terms); const t=db.topics[id];
+  if(t){ els.existingHint.textContent=`Saved topic: ${t.results.length} domains. Searching again will continue it.`; els.existingHint.className='existing'; }
+  else { els.existingHint.textContent=terms.length?'New filtered topic. Results must match the main text AND at least one OR field.':'New topic. Results will be saved automatically.'; els.existingHint.className=''; }
+}
+function switchTab(which){
+  const search=which==='search'; els.tabSearch.classList.toggle('active',search);els.tabFound.classList.toggle('active',!search);els.searchPanel.classList.toggle('active',search);els.foundPanel.classList.toggle('active',!search); if(!search)renderTopics();
+}
+
+els.tabSearch.addEventListener('click',()=>switchTab('search'));
+els.tabFound.addEventListener('click',()=>switchTab('found'));
+els.query.addEventListener('input',updateExistingHint);
+els.anyText1.addEventListener('input',updateExistingHint);
+els.anyText2.addEventListener('input',updateExistingHint);
+els.form.addEventListener('submit',e=>{e.preventDefault();const q=els.query.value.trim();if(!q){els.query.focus();return;}const terms=[els.anyText1.value,els.anyText2.value].map(cleanTerm).filter(Boolean);runSearch(q,terms);});
+els.stopBtn.addEventListener('click',()=>{stopped=true;if(controller)controller.abort();});
+els.searchPrev.addEventListener('click',()=>{searchPage--;renderSearchTopic();scrollTo({top:0,behavior:'smooth'});});
+els.searchNext.addEventListener('click',()=>{searchPage++;renderSearchTopic();scrollTo({top:0,behavior:'smooth'});});
+els.foundPrev.addEventListener('click',()=>{foundPage--;renderFoundViewer();});
+els.foundNext.addEventListener('click',()=>{foundPage++;renderFoundViewer();});
+els.continueBtn.addEventListener('click',()=>{const t=db.topics[foundTopicId];if(!t)return;els.query.value=t.query;els.anyText1.value=t.anyTerms?.[0]||'';els.anyText2.value=t.anyTerms?.[1]||'';currentTopicId=t.id;searchPage=1;switchTab('search');updateExistingHint();renderSearchTopic();runSearch(t.query,t.anyTerms||[]);});
+els.deleteTopicBtn.addEventListener('click',()=>{const t=db.topics[foundTopicId];if(!t)return;if(!confirm(`Delete saved topic “${t.query}” and all ${t.results.length} domains?`))return;delete db.topics[foundTopicId];if(currentTopicId===foundTopicId)currentTopicId=null;foundTopicId=null;saveDB();renderTopics();renderSearchTopic();toast('Topic deleted');});
+
+function setCountryFilter(value){
+  countryFilter=['all','us','us-tld'].includes(value)?value:'all';
+  db.settings=db.settings||{}; db.settings.countryFilter=countryFilter; saveDB();
+  els.searchCountryFilter.value=countryFilter; els.foundCountryFilter.value=countryFilter;
+  searchPage=1; foundPage=1; renderSearchTopic(); renderFoundViewer();
+}
+els.searchCountryFilter.addEventListener('change',()=>setCountryFilter(els.searchCountryFilter.value));
+els.foundCountryFilter.addEventListener('change',()=>setCountryFilter(els.foundCountryFilter.value));
+els.usSearchOnly.addEventListener('change',()=>{db.settings=db.settings||{};db.settings.usSearchOnly=els.usSearchOnly.checked;saveDB();});
+
+function csvCell(v){ const s=String(v??''); return /[",\n\r]/.test(s)?`"${s.replace(/"/g,'""')}"`:s; }
+function safeFilePart(v){ return String(v||'search').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,50)||'search'; }
+function exportLinksCSV(topics, filename){
+  const lines=[['Search topic','Must also contain (OR)','Domain','Direct page link'].map(csvCell).join(',')];
+  for(const t of topics){
+    const crit=displayAnyTerms(t).join(' OR ');
+    for(const r of (t.results||[])) lines.push([t.query,crit,r.domain,r.url].map(csvCell).join(','));
+  }
+  const bom='\ufeff'; const blob=new Blob([bom+lines.join('\r\n')],{type:'text/csv;charset=utf-8'});
+  const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1200);
+}
+els.exportLinksBtn.addEventListener('click',()=>{ const topics=allTopics(); if(!topics.length){toast('No saved domains to export');return;} exportLinksCSV(topics,`exact-domain-all-links-${new Date().toISOString().slice(0,10)}.csv`); });
+els.exportTopicBtn.addEventListener('click',()=>{ const t=db.topics[foundTopicId]; if(!t){toast('Open a topic first');return;} exportLinksCSV([t],`exact-domain-${safeFilePart(t.query)}-links.csv`); });
+
+els.exportBtn.addEventListener('click',()=>{
+  const blob=new Blob([JSON.stringify(db,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`exact-domain-search-backup-${new Date().toISOString().slice(0,10)}.json`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+});
+els.importFile.addEventListener('change',async()=>{
+  const f=els.importFile.files?.[0];if(!f)return;
+  try{
+    const incoming=JSON.parse(await f.text());if(!incoming?.topics)throw new Error('Invalid backup');
+    for(const t of Object.values(incoming.topics)){
+      if(!t?.query)continue;const local=ensureTopic(t.query,t.anyTerms||[]);const known=new Set(local.results.map(r=>r.domain));
+      for(const r of (t.results||[])){if(r?.domain&&!known.has(r.domain)){local.results.push(r);known.add(r.domain);}}
+      local.updatedAt=Math.max(local.updatedAt||0,t.updatedAt||0,Date.now());local.state.totalCalls=Math.max(local.state.totalCalls||0,t.state?.totalCalls||0);local.state.cursor=Math.max(local.state.cursor||0,t.state?.cursor||0);local.state.usCursor=Math.max(local.state.usCursor||0,t.state?.usCursor||0);
+    }
+    saveDB();renderTopics();toast('Backup imported');
+  }catch(e){alert('Could not import that backup: '+(e.message||e));}
+  els.importFile.value='';
+});
+
+try{navigator.storage?.persist?.();}catch{}
+els.searchCountryFilter.value=countryFilter; els.foundCountryFilter.value=countryFilter; els.usSearchOnly.checked=!!db.settings?.usSearchOnly;
+renderTopics();updateGlobalCounts();updateExistingHint();
+})();
+</script>
+</body>
+</html>
