@@ -380,24 +380,36 @@
   }
   function loadState(){
     try {
-      const candidates = [STORE_KEY, ...STATE_BACKUP_KEYS, STATE_STABLE_KEY]
-        .map(k => parseJSON(localStorage.getItem(k)))
-        .filter(Boolean);
+      const keys=[STORE_KEY, ...STATE_BACKUP_KEYS, STATE_STABLE_KEY];
+      const candidates=[];
+      for(const k of keys){
+        const a=parseJSON(localStorage.getItem(k)); if(a) candidates.push(a);
+        const b=parseJSON(sessionStorage.getItem(k)); if(b) candidates.push(b);
+      }
+      if(history.state && history.state.pftState) candidates.push(history.state.pftState);
       return chooseNewestState(candidates);
     } catch { return defaultState(); }
   }
   function rotateLocal(primaryKey, backupKeys, raw){
     try {
       const current = localStorage.getItem(primaryKey);
-      if(current === raw) return;
-      if(current){
-        for(let i=backupKeys.length-1;i>0;i--){
-          const previous = localStorage.getItem(backupKeys[i-1]);
-          if(previous) localStorage.setItem(backupKeys[i], previous);
+      if(current !== raw){
+        if(current){
+          for(let i=backupKeys.length-1;i>0;i--){
+            const previous = localStorage.getItem(backupKeys[i-1]);
+            if(previous) localStorage.setItem(backupKeys[i], previous);
+          }
+          localStorage.setItem(backupKeys[0], current);
         }
-        localStorage.setItem(backupKeys[0], current);
+        localStorage.setItem(primaryKey, raw);
       }
-      localStorage.setItem(primaryKey, raw);
+    } catch {}
+    try {
+      sessionStorage.setItem(primaryKey, raw);
+      for(const k of backupKeys){
+        const v=localStorage.getItem(k);
+        if(v) sessionStorage.setItem(k,v);
+      }
     } catch {}
   }
   function maybeWriteStable(key, atKey, raw, minimumAgeMs){
@@ -435,7 +447,11 @@
       const raw = JSON.stringify(state);
       rotateLocal(STORE_KEY, STATE_BACKUP_KEYS, raw);
       maybeWriteStable(STATE_STABLE_KEY, STATE_STABLE_KEY+'.at', raw, 300000);
+      try {
+        history.replaceState({...history.state,pftState:JSON.parse(raw)},'');
+      } catch {}
       scheduleDurableStateWrite(JSON.parse(raw));
+      void flushDurableState();
       if(syncChannel) {
         try { syncChannel.postMessage({type:'state', payload:JSON.parse(raw)}); } catch {}
       }
@@ -464,10 +480,16 @@
   }
   function loadCachedCatalog(){
     try {
-      const candidates = [CATALOG_KEY, ...CATALOG_BACKUP_KEYS, CATALOG_STABLE_KEY]
-        .map(k => normalizeCatalogEnvelope(parseJSON(localStorage.getItem(k))))
-        .filter(Boolean)
-        .filter(x => reviveCatalog(x.items).length);
+      const keys=[CATALOG_KEY, ...CATALOG_BACKUP_KEYS, CATALOG_STABLE_KEY];
+      const candidates=[];
+      for(const k of keys){
+        const a=normalizeCatalogEnvelope(parseJSON(localStorage.getItem(k)));
+        if(a && reviveCatalog(a.items).length) candidates.push(a);
+        const b=normalizeCatalogEnvelope(parseJSON(sessionStorage.getItem(k)));
+        if(b && reviveCatalog(b.items).length) candidates.push(b);
+      }
+      const h=normalizeCatalogEnvelope(history.state && history.state.pftCatalog);
+      if(h && reviveCatalog(h.items).length) candidates.push(h);
       if(!candidates.length) return [];
       candidates.sort((a,b)=>Number(b.savedAt||0)-Number(a.savedAt||0));
       catalogSavedAt = Number(candidates[0].savedAt||0);
@@ -510,7 +532,11 @@
       const raw = JSON.stringify(envelope);
       rotateLocal(CATALOG_KEY, CATALOG_BACKUP_KEYS, raw);
       maybeWriteStable(CATALOG_STABLE_KEY, CATALOG_STABLE_KEY+'.at', raw, 1800000);
+      try {
+        history.replaceState({...history.state,pftCatalog:envelope},'');
+      } catch {}
       scheduleDurableCatalogWrite(envelope);
+      void flushDurableCatalog();
     } catch {}
   }
   function scheduleCatalogSave(){
@@ -1088,9 +1114,20 @@
   }
 
   els.connectBtn.addEventListener('click',connect);
-  els.folderInput.addEventListener('change',()=>{
-    const entries=[...els.folderInput.files].map(file=>({file,relativePath:file.webkitRelativePath||file.name})); loadEntries(entries); els.folderInput.value='';
-  });
+  let lastFolderSelectionToken='';
+  const consumeFolderSelection=()=>{
+    const files=[...els.folderInput.files];
+    if(!files.length) return;
+    const token=`${files.length}|${files[0]?.name||''}|${files[files.length-1]?.name||''}|${files.reduce((n,f)=>n+(f.size||0),0)}`;
+    if(token===lastFolderSelectionToken) return;
+    lastFolderSelectionToken=token;
+    const entries=files.map(file=>({file,relativePath:file.webkitRelativePath||file.name}));
+    loadEntries(entries);
+    void requestPersistentStorage();
+    setTimeout(()=>{ els.folderInput.value=''; },0);
+  };
+  els.folderInput.addEventListener('input',consumeFolderSelection);
+  els.folderInput.addEventListener('change',consumeFolderSelection);
   els.search.addEventListener('input',render);
   document.querySelectorAll('.seg button').forEach(b=>b.addEventListener('click',()=>{ document.querySelectorAll('.seg button').forEach(x=>x.classList.remove('active')); b.classList.add('active'); filter=b.dataset.filter; render(); }));
   els.playBtn.addEventListener('click',()=>{ if(currentIndex<0){ if(lessons.length) playIndex(Math.min(firstIncompleteIndex(),lessons.length-1)); return;} if(els.audio.paused) els.audio.play().catch(()=>{}); else els.audio.pause(); });
@@ -1157,6 +1194,8 @@
     els.notice.style.display = 'none';
     render();
     updateContinueCard();
+    saveCatalog();
+    saveState();
   })();
 
   if('BroadcastChannel' in window){
