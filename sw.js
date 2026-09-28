@@ -12,7 +12,7 @@
  */
 'use strict';
 
-const VERSION = '1.0.0';
+const VERSION = '1.1.0';
 const CACHE_PREFIX = 'pim-fr-shell-';
 const CACHE = CACHE_PREFIX + VERSION;
 
@@ -22,6 +22,10 @@ const CRITICAL = ['./', './index.html'];
 const OPTIONAL = [
   './manifest.webmanifest',
   './icons/icon.svg',
+  './icons/icon-192.png',
+  './icons/icon-512.png',
+  './icons/icon-maskable-192.png',
+  './icons/icon-maskable-512.png',
 ];
 
 const SCOPE_URL = new URL('./', self.location.href).href;

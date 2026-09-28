@@ -10,7 +10,7 @@ site: no server, no login, no build step, and nothing leaves your phone.
 | `index.html` | The whole app (HTML, CSS and JavaScript in one file) |
 | `manifest.webmanifest` | Name, colors and icons for "Install app" |
 | `sw.js` | Offline app shell. It caches only the files above, never your audio |
-| `icons/icon.svg` | Original tricolor-headphones app icon |
+| `icons/` | App icons (original artwork: tricolor headphones) |
 | `.nojekyll` | Tells GitHub Pages to publish the files exactly as they are |
 
 ## Deploy to GitHub Pages
@@ -36,10 +36,18 @@ site: no server, no login, no build step, and nothing leaves your phone.
   folders). Android then asks *"Upload 213 files to this site?"* or *"Allow this site to
   view and copy files?"*. That is only Chrome's wording for granting access: the files
   stay on your phone and are played from there.
-- **After a restart:** Android forgets the folder permission. Your lessons, checkmarks,
-  resume points and total listening time still show. When you tap play, the app asks you
-  to **Reconnect audio folder**. Choose the same `French` folder and playback picks up
-  where you left off.
+- **Lessons are kept on the phone:** Chrome on Android forgets folder access every time
+  the page reloads, and websites cannot keep it. So right after you choose the folder,
+  the app copies every lesson once into its own private storage on the phone (about the
+  size of your `French` folder). A bar in the Progress card shows it saving. Keep the app
+  open until it finishes (the screen stays on meanwhile). From then on the lessons play
+  after any refresh or restart without asking for the folder. The copies never leave the
+  phone.
+- **If a lesson isn't saved yet** (for example, the app closed mid-copy), tapping it asks
+  you to **Reconnect audio folder**. Choose the same `French` folder; playback picks up
+  where you left off and the remaining lessons finish saving.
+- **Menu (⋯) → Lessons on this phone** shows how much is saved. **Remove saved lessons**
+  frees the space; after that, the app asks for the folder again after each restart.
 - Lessons unlock one at a time. A lesson completes when its audio reaches the end or when
   you tap its circle. Tapping a finished lesson's checkmark marks it not complete, with Undo.
 
@@ -47,9 +55,13 @@ site: no server, no login, no build step, and nothing leaves your phone.
 
 - Progress and the lesson list are saved on the phone in two places: IndexedDB, plus a
   localStorage copy that is written instantly. If one copy is damaged, the other restores it.
+- The saved lesson copies live in a separate storage bucket. If the phone ever ran low on
+  space and Chrome cleared them, only the copies would go: your progress stays, and the
+  app simply asks for the folder again and re-saves.
 - **Menu (⋯) → Export progress** saves a small `.json` backup to Downloads.
   **Import progress** restores it, even on a new phone. Audio is never exported.
-- Clearing Chrome's site data for `github.io` erases the progress. Export first.
+- Clearing Chrome's site data for `github.io` erases the progress and the saved lessons.
+  Export first.
 - There is no analytics, tracking, or network traffic beyond loading the app itself.
 
 ## Updating the app
