@@ -325,27 +325,126 @@
   let durationKnown = new Set();
   let saveTimer = 0;
   let catalogSaveTimer = 0;
+  let durableStateTimer = 0;
+  let durableCatalogTimer = 0;
+  let pendingStateSnapshot = null;
+  let pendingCatalogSnapshot = null;
   let savedRootHandle = null;
   let cachedMode = false;
+  let catalogSavedAt = 0;
+  let lastPositionSaveAt = 0;
+  let syncChannel = null;
 
-  let state = loadState();
+  const STATE_BACKUP_KEYS = [STORE_KEY + '.backup1', STORE_KEY + '.backup2', STORE_KEY + '.backup3'];
+  const CATALOG_BACKUP_KEYS = [CATALOG_KEY + '.backup1', CATALOG_KEY + '.backup2'];
+  const STATE_STABLE_KEY = STORE_KEY + '.stable';
+  const CATALOG_STABLE_KEY = CATALOG_KEY + '.stable';
+  const CACHE_STORE = 'cache';
+  const DB_VERSION = 2;
+  const DURABLE_CACHE = 'pimsleurFrenchTrackerDurable.v1';
 
+  function defaultState(){
+    return { completed:{}, positions:{}, last:null, speed:1, collapsed:{}, celebrationCount:0, _savedAt:0 };
+  }
+  function normalizeState(parsed){
+    const p = parsed && typeof parsed === 'object' ? parsed : {};
+    return {
+      completed: p.completed && typeof p.completed === 'object' ? p.completed : {},
+      positions: p.positions && typeof p.positions === 'object' ? p.positions : {},
+      last: p.last || null,
+      speed: Number(p.speed || 1),
+      collapsed: p.collapsed && typeof p.collapsed === 'object' ? p.collapsed : {},
+      celebrationCount: Number(p.celebrationCount || 0),
+      _savedAt: Number(p._savedAt || p.savedAt || 0)
+    };
+  }
+  function validStateShape(x){
+    return !!(x && typeof x === 'object' && x.completed && typeof x.completed === 'object' && x.positions && typeof x.positions === 'object');
+  }
+  function parseJSON(raw){
+    if(!raw || typeof raw !== 'string') return null;
+    try { return JSON.parse(raw); } catch { return null; }
+  }
+  function chooseNewestState(candidates){
+    const valid = candidates.map(normalizeState).filter(validStateShape);
+    if(!valid.length) return defaultState();
+    valid.sort((a,b)=>Number(b._savedAt||0)-Number(a._savedAt||0));
+    return valid[0];
+  }
   function loadState(){
     try {
-      const raw = localStorage.getItem(STORE_KEY);
-      const parsed = raw ? JSON.parse(raw) : {};
-      return { completed: parsed.completed || {}, positions: parsed.positions || {}, last: parsed.last || null, speed: Number(parsed.speed || 1), collapsed: parsed.collapsed || {}, celebrationCount: Number(parsed.celebrationCount || 0) };
-    } catch { return { completed:{}, positions:{}, last:null, speed:1, collapsed:{}, celebrationCount:0 }; }
+      const candidates = [STORE_KEY, ...STATE_BACKUP_KEYS, STATE_STABLE_KEY]
+        .map(k => parseJSON(localStorage.getItem(k)))
+        .filter(Boolean);
+      return chooseNewestState(candidates);
+    } catch { return defaultState(); }
+  }
+  function rotateLocal(primaryKey, backupKeys, raw){
+    try {
+      const current = localStorage.getItem(primaryKey);
+      if(current === raw) return;
+      if(current){
+        for(let i=backupKeys.length-1;i>0;i--){
+          const previous = localStorage.getItem(backupKeys[i-1]);
+          if(previous) localStorage.setItem(backupKeys[i], previous);
+        }
+        localStorage.setItem(backupKeys[0], current);
+      }
+      localStorage.setItem(primaryKey, raw);
+    } catch {}
+  }
+  function maybeWriteStable(key, atKey, raw, minimumAgeMs){
+    try {
+      const now = Date.now();
+      const last = Number(localStorage.getItem(atKey) || 0);
+      if(!localStorage.getItem(key) || now-last >= minimumAgeMs){
+        localStorage.setItem(key, raw);
+        localStorage.setItem(atKey, String(now));
+      }
+    } catch {}
+  }
+  function scheduleDurableStateWrite(snapshot){
+    pendingStateSnapshot = snapshot;
+    clearTimeout(durableStateTimer);
+    durableStateTimer = setTimeout(flushDurableState, 250);
+  }
+  async function flushDurableState(){
+    clearTimeout(durableStateTimer);
+    const snapshot = pendingStateSnapshot;
+    pendingStateSnapshot = null;
+    if(!snapshot) return;
+    try {
+      const previous = await idbGet(CACHE_STORE, 'state.latest');
+      if(previous) await idbPut(CACHE_STORE, 'state.previous', previous);
+      await idbPut(CACHE_STORE, 'state.latest', snapshot);
+      const stable = await idbGet(CACHE_STORE, 'state.stable');
+      if(!stable || Date.now()-Number(stable._savedAt||0) >= 300000) await idbPut(CACHE_STORE, 'state.stable', snapshot);
+    } catch {}
+    try { await durableCachePut('state', snapshot); } catch {}
   }
   function saveState(){
-    try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch {}
-  }
-  function loadCachedCatalog(){
     try {
-      const raw = localStorage.getItem(CATALOG_KEY);
-      const parsed = raw ? JSON.parse(raw) : [];
-      if(!Array.isArray(parsed)) return [];
-      return parsed.filter(x => x && x.key && x.path && x.name && x.folder).map(x => ({
+      state._savedAt = Date.now();
+      const raw = JSON.stringify(state);
+      rotateLocal(STORE_KEY, STATE_BACKUP_KEYS, raw);
+      maybeWriteStable(STATE_STABLE_KEY, STATE_STABLE_KEY+'.at', raw, 300000);
+      scheduleDurableStateWrite(JSON.parse(raw));
+      if(syncChannel) {
+        try { syncChannel.postMessage({type:'state', payload:JSON.parse(raw)}); } catch {}
+      }
+    } catch {}
+  }
+
+  function normalizeCatalogEnvelope(value){
+    if(Array.isArray(value)) return {savedAt:0, items:value};
+    if(value && typeof value === 'object' && Array.isArray(value.items)) return {savedAt:Number(value.savedAt||0), items:value.items};
+    return null;
+  }
+  function reviveCatalog(items){
+    if(!Array.isArray(items)) return [];
+    return items
+      .filter(x => x && x.key && x.path && x.name && x.folder)
+      .map(x => ({
         file:null,
         path:String(x.path),
         folder:String(x.folder),
@@ -355,23 +454,121 @@
         duration:Number(x.duration || 0),
         cached:true
       }));
+  }
+  function loadCachedCatalog(){
+    try {
+      const candidates = [CATALOG_KEY, ...CATALOG_BACKUP_KEYS, CATALOG_STABLE_KEY]
+        .map(k => normalizeCatalogEnvelope(parseJSON(localStorage.getItem(k))))
+        .filter(Boolean)
+        .filter(x => reviveCatalog(x.items).length);
+      if(!candidates.length) return [];
+      candidates.sort((a,b)=>Number(b.savedAt||0)-Number(a.savedAt||0));
+      catalogSavedAt = Number(candidates[0].savedAt||0);
+      return reviveCatalog(candidates[0].items);
     } catch { return []; }
+  }
+  function catalogEnvelope(){
+    return {
+      savedAt: Date.now(),
+      items: lessons.map(l => ({
+        path:l.path, folder:l.folder, name:l.name, key:l.key,
+        size:Number(l.size || 0), duration:Number(l.duration || 0)
+      }))
+    };
+  }
+  function scheduleDurableCatalogWrite(snapshot){
+    pendingCatalogSnapshot = snapshot;
+    clearTimeout(durableCatalogTimer);
+    durableCatalogTimer = setTimeout(flushDurableCatalog, 350);
+  }
+  async function flushDurableCatalog(){
+    clearTimeout(durableCatalogTimer);
+    const snapshot = pendingCatalogSnapshot;
+    pendingCatalogSnapshot = null;
+    if(!snapshot || !Array.isArray(snapshot.items) || !snapshot.items.length) return;
+    try {
+      const previous = await idbGet(CACHE_STORE, 'catalog.latest');
+      if(previous) await idbPut(CACHE_STORE, 'catalog.previous', previous);
+      await idbPut(CACHE_STORE, 'catalog.latest', snapshot);
+      const stable = await idbGet(CACHE_STORE, 'catalog.stable');
+      if(!stable || Date.now()-Number(stable.savedAt||0) >= 1800000) await idbPut(CACHE_STORE, 'catalog.stable', snapshot);
+    } catch {}
+    try { await durableCachePut('catalog', snapshot); } catch {}
   }
   function saveCatalog(){
     try {
-      const catalog = lessons.map(l => ({
-        path:l.path, folder:l.folder, name:l.name, key:l.key,
-        size:Number(l.size || 0), duration:Number(l.duration || 0)
-      }));
-      if(catalog.length) localStorage.setItem(CATALOG_KEY, JSON.stringify(catalog));
+      if(!lessons.length) return;
+      const envelope = catalogEnvelope();
+      catalogSavedAt = envelope.savedAt;
+      const raw = JSON.stringify(envelope);
+      rotateLocal(CATALOG_KEY, CATALOG_BACKUP_KEYS, raw);
+      maybeWriteStable(CATALOG_STABLE_KEY, CATALOG_STABLE_KEY+'.at', raw, 1800000);
+      scheduleDurableCatalogWrite(envelope);
     } catch {}
   }
   function scheduleCatalogSave(){
     clearTimeout(catalogSaveTimer);
     catalogSaveTimer = setTimeout(saveCatalog, 500);
   }
+  async function durableCachePut(kind, payload){
+    if(!('caches' in window)) return;
+    const cache = await caches.open(DURABLE_CACHE);
+    const url = new URL(`./.__pft_${kind}__`, location.href).href;
+    await cache.put(url, new Response(JSON.stringify(payload), {
+      headers:{'Content-Type':'application/json','Cache-Control':'no-store'}
+    }));
+  }
+  async function durableCacheGet(kind){
+    if(!('caches' in window)) return null;
+    try {
+      const cache = await caches.open(DURABLE_CACHE);
+      const url = new URL(`./.__pft_${kind}__`, location.href).href;
+      const response = await cache.match(url);
+      return response ? await response.json() : null;
+    } catch { return null; }
+  }
   async function requestPersistentStorage(){
     try { if(navigator.storage?.persist) await navigator.storage.persist(); } catch {}
+  }
+  async function restoreDurableCaches(){
+    const stateCandidates = [state];
+    try {
+      for(const k of ['state.latest','state.previous','state.stable']){
+        const v = await idbGet(CACHE_STORE,k); if(v) stateCandidates.push(v);
+      }
+    } catch {}
+    try {
+      const v = await durableCacheGet('state'); if(v) stateCandidates.push(v);
+    } catch {}
+    const bestState = chooseNewestState(stateCandidates);
+    if(Number(bestState._savedAt||0) > Number(state._savedAt||0)){
+      state = bestState;
+      try { rotateLocal(STORE_KEY, STATE_BACKUP_KEYS, JSON.stringify(state)); } catch {}
+      if(els.speed) els.speed.value = String(state.speed || 1);
+      if(lessons.length){ render(); updateContinueCard(); }
+    }
+
+    const catalogCandidates = [];
+    try {
+      for(const k of ['catalog.latest','catalog.previous','catalog.stable']){
+        const v = normalizeCatalogEnvelope(await idbGet(CACHE_STORE,k)); if(v) catalogCandidates.push(v);
+      }
+    } catch {}
+    try {
+      const v = normalizeCatalogEnvelope(await durableCacheGet('catalog')); if(v) catalogCandidates.push(v);
+    } catch {}
+    catalogCandidates.sort((a,b)=>Number(b.savedAt||0)-Number(a.savedAt||0));
+    const bestCatalog = catalogCandidates.find(x => reviveCatalog(x.items).length);
+    if(bestCatalog && (cachedMode || !lessons.length) && Number(bestCatalog.savedAt||0) > Number(catalogSavedAt||0)){
+      lessons = reviveCatalog(bestCatalog.items);
+      cachedMode = true;
+      catalogSavedAt = Number(bestCatalog.savedAt||0);
+      totalDuration = lessons.reduce((sum,l)=>sum + (Number(l.duration)||0),0);
+      durationKnown = new Set(lessons.filter(l=>l.duration>0).map(l=>l.key));
+      try { rotateLocal(CATALOG_KEY, CATALOG_BACKUP_KEYS, JSON.stringify(bestCatalog)); } catch {}
+      render();
+      updateContinueCard();
+    }
   }
   function safePath(s){ return String(s || '').replace(/\\/g,'/').replace(/^\/+/, ''); }
   function baseName(path){ return safePath(path).split('/').pop() || path; }
@@ -600,13 +797,45 @@
 
   function openDB(){
     return new Promise((resolve,reject)=>{
-      const req = indexedDB.open(HANDLE_DB,1);
-      req.onupgradeneeded = () => req.result.createObjectStore(HANDLE_STORE);
-      req.onsuccess = () => resolve(req.result); req.onerror = () => reject(req.error);
+      const req = indexedDB.open(HANDLE_DB, DB_VERSION);
+      req.onupgradeneeded = () => {
+        const db = req.result;
+        if(!db.objectStoreNames.contains(HANDLE_STORE)) db.createObjectStore(HANDLE_STORE);
+        if(!db.objectStoreNames.contains(CACHE_STORE)) db.createObjectStore(CACHE_STORE);
+      };
+      req.onsuccess = () => {
+        req.result.onversionchange = () => req.result.close();
+        resolve(req.result);
+      };
+      req.onerror = () => reject(req.error);
+      req.onblocked = () => reject(new Error('IndexedDB upgrade blocked'));
     });
   }
-  async function putHandle(handle){ try { const db=await openDB(); await new Promise((res,rej)=>{ const tx=db.transaction(HANDLE_STORE,'readwrite'); tx.objectStore(HANDLE_STORE).put(handle,HANDLE_KEY); tx.oncomplete=res; tx.onerror=()=>rej(tx.error);}); db.close(); } catch {} }
-  async function getHandle(){ try { const db=await openDB(); const value=await new Promise((res,rej)=>{ const tx=db.transaction(HANDLE_STORE,'readonly'); const r=tx.objectStore(HANDLE_STORE).get(HANDLE_KEY); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error);}); db.close(); return value; } catch { return null; } }
+  async function idbPut(store,key,value){
+    const db=await openDB();
+    try {
+      await new Promise((res,rej)=>{
+        const tx=db.transaction(store,'readwrite');
+        tx.objectStore(store).put(value,key);
+        tx.oncomplete=()=>res();
+        tx.onerror=()=>rej(tx.error);
+        tx.onabort=()=>rej(tx.error);
+      });
+    } finally { db.close(); }
+  }
+  async function idbGet(store,key){
+    const db=await openDB();
+    try {
+      return await new Promise((res,rej)=>{
+        const tx=db.transaction(store,'readonly');
+        const r=tx.objectStore(store).get(key);
+        r.onsuccess=()=>res(r.result);
+        r.onerror=()=>rej(r.error);
+      });
+    } finally { db.close(); }
+  }
+  async function putHandle(handle){ try { await idbPut(HANDLE_STORE,HANDLE_KEY,handle); } catch {} }
+  async function getHandle(){ try { return await idbGet(HANDLE_STORE,HANDLE_KEY); } catch { return null; } }
 
   async function restoreSavedHandle(promptForPermission=false){
     try {
@@ -646,6 +875,7 @@
   }
 
   function loadEntries(entries){
+    const knownDurations = new Map(lessons.map(l => [l.key, Number(l.duration||0)]));
     cleanupUrls();
     cachedMode = false;
     els.notice.style.display = '';
@@ -658,7 +888,8 @@
       .map(x => {
         const path = safePath(x.relativePath || x.file.webkitRelativePath || x.file.name);
         const folder = groupFolder(path);
-        return { file:x.file, path, folder, name:prettyFile(x.file.name), key:stableKey(path,x.file), size:x.file.size || 0, duration:0 };
+        const key = stableKey(path,x.file);
+        return { file:x.file, path, folder, name:prettyFile(x.file.name), key, size:x.file.size || 0, duration:Number(knownDurations.get(key)||0) };
       })
       .sort((a,b) => {
         const la=romanLevel(a.folder), lb=romanLevel(b.folder);
@@ -670,8 +901,9 @@
       });
 
     lessons.forEach(l => urls.set(l.key, URL.createObjectURL(l.file)));
+    totalDuration = lessons.reduce((sum,l)=>sum + (Number(l.duration)||0),0);
+    durationKnown = new Set(lessons.filter(l=>l.duration>0).map(l=>l.key));
     saveCatalog();
-    totalDuration = 0; durationKnown.clear();
     els.notice.innerHTML = lessons.length
       ? `<b>Connected:</b> ${lessons.length} audio files found across ${new Set(lessons.map(l=>l.folder)).size} folder${new Set(lessons.map(l=>l.folder)).size===1?'':'s'}. Your current lesson is unlocked; completing it unlocks exactly one next lesson.`
       : `<b>No audio found.</b> Choose the main French folder that contains your Pimsleur subfolders.`;
@@ -682,7 +914,7 @@
 
   function probeDurations(){
     // Read metadata a few at a time without loading full audio.
-    const queue = lessons.slice();
+    const queue = lessons.filter(l => !(Number(l.duration)>0));
     let active = 0;
     const launch = () => {
       while(active < 3 && queue.length){
@@ -814,6 +1046,13 @@
     currentIndex=i; const l=lessons[i];
     els.audio.src=urls.get(l.key); els.audio.playbackRate=Number(els.speed.value)||1;
     els.audio.onloadedmetadata=()=>{
+      if(Number.isFinite(els.audio.duration) && els.audio.duration>0 && Math.abs(Number(l.duration||0)-els.audio.duration)>0.5){
+        l.duration=els.audio.duration;
+        durationKnown.add(l.key);
+        totalDuration=lessons.reduce((sum,x)=>sum+(Number(x.duration)||0),0);
+        updateStats();
+        scheduleCatalogSave();
+      }
       const saved=Number(state.positions[l.key]||0); if(saved>2 && saved < els.audio.duration-3) els.audio.currentTime=saved;
       els.timeTotal.textContent=formatTime(els.audio.duration); syncPlayer();
     };
@@ -855,7 +1094,11 @@
   els.audio.addEventListener('play',syncPlayer); els.audio.addEventListener('pause',()=>{saveCurrentPosition();syncPlayer();});
   els.audio.addEventListener('timeupdate',()=>{
     const d=els.audio.duration||0, t=els.audio.currentTime||0; els.timeNow.textContent=formatTime(t); els.timeTotal.textContent=formatTime(d); els.seek.value=d?String(Math.round(t/d*1000)):'0';
-    clearTimeout(saveTimer); saveTimer=setTimeout(saveCurrentPosition,900);
+    const now = Date.now();
+    if(now-lastPositionSaveAt >= 5000){
+      lastPositionSaveAt = now;
+      saveCurrentPosition();
+    }
   });
   els.seek.addEventListener('input',()=>{ const d=els.audio.duration||0; if(d) els.audio.currentTime=(Number(els.seek.value)/1000)*d; });
   els.audio.addEventListener('ended',()=>{
@@ -879,11 +1122,23 @@
     els.importInput.value='';
   });
 
-  window.addEventListener('beforeunload',()=>{saveCurrentPosition();cleanupUrls();});
-  document.addEventListener('visibilitychange',()=>{if(document.hidden)saveCurrentPosition();});
+  function persistCriticalState(){
+    saveCurrentPosition();
+    saveState();
+    saveCatalog();
+    void flushDurableState();
+    void flushDurableCatalog();
+  }
 
-  // Restore the cached catalog first so refreshing never makes the lesson list disappear.
-  // Audio file handles are kept separately in IndexedDB and reused whenever the browser allows it.
+  window.addEventListener('beforeunload',()=>{persistCriticalState();cleanupUrls();});
+  window.addEventListener('pagehide',()=>{persistCriticalState();});
+  window.addEventListener('blur',()=>{saveCurrentPosition();});
+  document.addEventListener('visibilitychange',()=>{if(document.hidden)persistCriticalState();});
+  document.addEventListener('freeze',()=>{persistCriticalState();});
+  setInterval(()=>{
+    if(currentIndex>=0 && !els.audio.paused && !document.hidden) saveCurrentPosition();
+  },5000);
+
   (() => {
     const cached = loadCachedCatalog();
     if(!cached.length) return;
@@ -897,8 +1152,39 @@
     updateContinueCard();
   })();
 
-  // Silently reuse access when the browser preserved permission. If it did not, keep the
-  // cached library visible and request permission only from the user's next tap.
+  if('BroadcastChannel' in window){
+    try {
+      syncChannel = new BroadcastChannel('pimsleurFrenchTracker.sync.v1');
+      syncChannel.onmessage = (event)=>{
+        const msg=event.data;
+        if(!msg || msg.type!=='state' || !msg.payload) return;
+        const incoming=normalizeState(msg.payload);
+        if(Number(incoming._savedAt||0) <= Number(state._savedAt||0)) return;
+        state=incoming;
+        try { rotateLocal(STORE_KEY,STATE_BACKUP_KEYS,JSON.stringify(state)); } catch {}
+        if(els.speed) els.speed.value=String(state.speed||1);
+        if(lessons.length){render();updateContinueCard();}
+      };
+    } catch {}
+  }
+  window.addEventListener('storage',(event)=>{
+    if(event.key!==STORE_KEY || !event.newValue) return;
+    const incoming=normalizeState(parseJSON(event.newValue));
+    if(Number(incoming._savedAt||0) <= Number(state._savedAt||0)) return;
+    state=incoming;
+    if(els.speed) els.speed.value=String(state.speed||1);
+    if(lessons.length){render();updateContinueCard();}
+  });
+
+  void requestPersistentStorage();
+  void restoreDurableCaches();
+
+  if('serviceWorker' in navigator){
+    window.addEventListener('load',()=>{
+      navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'}).catch(()=>{});
+    },{once:true});
+  }
+
   (async()=>{
     if(!('showDirectoryPicker' in window)) return;
     savedRootHandle = await getHandle();
