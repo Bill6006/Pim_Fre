@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#0b1020" />
+<title>Pimsleur French • Lesson Tracker</title>
+<style>
+  :root{
+    --bg:#08101c;
+    --bg2:#101b2f;
+    --card:rgba(18,31,52,.78);
+    --card2:rgba(27,44,72,.72);
+    --text:#f7f4ec;
+    --muted:#9fb0c8;
+    --line:rgba(255,255,255,.09);
+    --blue:#5fa8ff;
+    --blue2:#8bc0ff;
+    --red:#ff747e;
+    --green:#5fe0ac;
+    --gold:#f6cf7a;
+    --shadow:0 18px 60px rgba(0,0,0,.32);
+    --radius:22px;
+  }
+  *{box-sizing:border-box}
+  html{background:var(--bg)}
+  body{
+    margin:0;
+    min-height:100vh;
+    color:var(--text);
+    font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+    background:
+      radial-gradient(circle at 12% 4%, rgba(40,104,196,.22), transparent 28rem),
+      radial-gradient(circle at 88% 12%, rgba(186,61,79,.13), transparent 24rem),
+      linear-gradient(145deg,var(--bg),var(--bg2));
+    padding-bottom:180px;
+  }
+  button,input{font:inherit}
+  button{color:inherit}
+  .shell{max-width:980px;margin:0 auto;padding:24px 18px 44px}
+  .hero{
+    position:relative;
+    overflow:hidden;
+    padding:28px 24px 24px;
+    border:1px solid var(--line);
+    border-radius:28px;
+    background:linear-gradient(135deg,rgba(21,38,66,.92),rgba(12,21,38,.86));
+    box-shadow:var(--shadow);
+  }
+  .hero:after{
+    content:"";
+    position:absolute;
+    width:220px;height:220px;border-radius:50%;
+    right:-90px;top:-90px;
+    background:linear-gradient(135deg,rgba(95,168,255,.28),rgba(255,116,126,.16));
+    filter:blur(2px);
+  }
+  .eyebrow{display:flex;align-items:center;gap:9px;color:var(--blue2);font-weight:800;font-size:.78rem;letter-spacing:.12em;text-transform:uppercase}
+  .flag{display:inline-grid;grid-template-columns:1fr 1fr 1fr;width:24px;height:16px;border-radius:3px;overflow:hidden;box-shadow:0 0 0 1px rgba(255,255,255,.18)}
+  .flag i:nth-child(1){background:#153d8a}.flag i:nth-child(2){background:#fff}.flag i:nth-child(3){background:#e23442}
+  h1{font-size:clamp(2rem,7vw,3.3rem);line-height:1;margin:13px 0 10px;letter-spacing:-.04em}
+  .subtitle{color:var(--muted);font-size:1rem;line-height:1.55;max-width:680px;margin:0}
+  .heroGrid{display:grid;grid-template-columns:1.3fr .7fr;gap:18px;align-items:end;position:relative;z-index:1}
+  .bigProgress{margin-top:22px}
+  .progressTop{display:flex;justify-content:space-between;gap:12px;color:#dfe8f5;font-weight:700;font-size:.92rem;margin-bottom:8px}
+  .progressTrack{height:10px;border-radius:999px;background:rgba(255,255,255,.08);overflow:hidden}
+  .progressFill{height:100%;width:0;border-radius:inherit;background:linear-gradient(90deg,var(--blue),var(--green));transition:width .35s ease}
+  .statCard{border:1px solid var(--line);background:rgba(255,255,255,.045);border-radius:20px;padding:18px;min-height:132px;display:flex;flex-direction:column;justify-content:center}
+  .statNum{font-size:2.2rem;font-weight:900;letter-spacing:-.04em}
+  .statLabel{color:var(--muted);font-size:.86rem;margin-top:3px}
+  .toolbar{display:flex;flex-wrap:wrap;gap:10px;margin:18px 0}
+  .btn,.seg button,.iconBtn{
+    border:1px solid var(--line);
+    background:rgba(255,255,255,.055);
+    border-radius:14px;
+    min-height:44px;
+    padding:10px 14px;
+    font-weight:800;
+    cursor:pointer;
+    transition:.2s ease;
+  }
+  .btn:hover,.seg button:hover,.iconBtn:hover{background:rgba(255,255,255,.1);transform:translateY(-1px)}
+  .btn.primary{background:linear-gradient(135deg,#3978df,#5fa8ff);border-color:transparent;color:#fff;box-shadow:0 10px 28px rgba(57,120,223,.25)}
+  .btn.small{min-height:38px;padding:8px 11px;font-size:.86rem}
+  .btn.danger{color:#ffabb2}
+  .spacer{flex:1 1 40px}
+  .searchWrap{position:relative;flex:1 1 220px;min-width:180px}
+  .searchWrap input{
+    width:100%;height:44px;padding:0 14px 0 40px;color:var(--text);
+    background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:14px;outline:none
+  }
+  .searchWrap input:focus{border-color:rgba(95,168,255,.7);box-shadow:0 0 0 3px rgba(95,168,255,.12)}
+  .searchIcon{position:absolute;left:14px;top:11px;color:var(--muted)}
+  .seg{display:flex;gap:5px;padding:4px;border:1px solid var(--line);background:rgba(255,255,255,.035);border-radius:14px;overflow:auto}
+  .seg button{border:0;min-height:34px;padding:7px 11px;background:transparent;color:var(--muted);white-space:nowrap;border-radius:10px}
+  .seg button.active{background:rgba(95,168,255,.16);color:#dfeeff}
+  .notice{
+    border:1px dashed rgba(139,192,255,.34);background:rgba(95,168,255,.07);border-radius:18px;padding:14px 16px;color:#c8d7ea;line-height:1.5;margin:8px 0 18px;
+  }
+  .notice b{color:#eef6ff}
+  .continueCard{
+    display:none;align-items:center;gap:14px;border:1px solid rgba(95,168,255,.28);background:linear-gradient(135deg,rgba(49,102,177,.18),rgba(255,255,255,.035));
+    border-radius:18px;padding:14px 16px;margin:0 0 18px;cursor:pointer
+  }
+  .continueIcon{width:46px;height:46px;border-radius:14px;display:grid;place-items:center;background:rgba(95,168,255,.16);font-size:1.25rem}
+  .continueText{min-width:0}.continueText b,.continueText span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.continueText span{font-size:.85rem;color:var(--muted);margin-top:3px}
+  .section{margin-top:18px;border:1px solid var(--line);background:var(--card);border-radius:var(--radius);overflow:hidden;box-shadow:0 12px 38px rgba(0,0,0,.17);backdrop-filter:blur(14px)}
+  .sectionHead{padding:18px 18px 15px;display:flex;gap:14px;align-items:center;border-bottom:1px solid var(--line)}
+  .levelBadge{flex:0 0 auto;width:46px;height:46px;border-radius:15px;display:grid;place-items:center;background:linear-gradient(135deg,rgba(95,168,255,.19),rgba(95,224,172,.10));border:1px solid rgba(255,255,255,.08);font-size:1.15rem;font-weight:900;color:#dbeaff}
+  .sectionTitle{min-width:0;flex:1}.sectionTitle h2{margin:0;font-size:1.05rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.sectionTitle p{margin:4px 0 0;color:var(--muted);font-size:.8rem}
+  .miniProg{width:100px;max-width:24vw}.miniProg .progressTrack{height:7px}.miniProg .pct{text-align:right;color:var(--muted);font-size:.75rem;margin-top:5px}
+  .lessonList{display:block}
+  .lesson{
+    display:grid;grid-template-columns:48px minmax(0,1fr) auto;gap:12px;align-items:center;padding:13px 16px;border-bottom:1px solid var(--line);cursor:pointer;transition:.18s ease
+  }
+  .lesson:last-child{border-bottom:0}.lesson:hover{background:rgba(255,255,255,.035)}.lesson.playing{background:linear-gradient(90deg,rgba(95,168,255,.12),transparent)}
+  .playCircle{width:44px;height:44px;border-radius:14px;border:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.05);display:grid;place-items:center;font-size:1rem;transition:.2s ease}
+  .lesson.playing .playCircle{background:rgba(95,168,255,.2);border-color:rgba(95,168,255,.35);box-shadow:inset 0 0 20px rgba(95,168,255,.08)}
+  .lessonName{font-weight:780;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.lessonMeta{color:var(--muted);font-size:.77rem;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .check{
+    width:32px;height:32px;border-radius:50%;border:1.5px solid rgba(255,255,255,.18);background:transparent;display:grid;place-items:center;cursor:pointer;transition:.18s ease;color:transparent;padding:0
+  }
+  .check.done{background:var(--green);border-color:var(--green);color:#062217;font-weight:1000;box-shadow:0 7px 22px rgba(95,224,172,.22)}
+  .sectionHead{cursor:pointer;user-select:none}
+  .sectionHead:focus-visible{outline:3px solid rgba(95,168,255,.35);outline-offset:-3px}
+  .collapseBtn{width:34px;height:34px;border:1px solid var(--line);border-radius:11px;background:rgba(255,255,255,.045);display:grid;place-items:center;cursor:pointer;color:var(--muted);font-weight:900;transition:.22s ease;flex:0 0 auto}
+  .section.collapsed .collapseBtn{transform:rotate(-90deg)}
+  .section.collapsed .lessonList{display:none}
+  .section.collapsed .sectionHead{border-bottom:0}
+  .lesson.locked{cursor:not-allowed;opacity:.46;filter:saturate(.65)}
+  .lesson.locked:hover{background:transparent}
+  .lesson.locked .playCircle{background:rgba(255,255,255,.025)}
+  .lesson.locked .lessonName{color:#b4c0cf}
+  .lesson.nextUp{box-shadow:inset 3px 0 0 rgba(95,168,255,.72);background:linear-gradient(90deg,rgba(95,168,255,.075),transparent)}
+  .lockPill{min-width:32px;height:32px;border-radius:50%;border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.035);display:grid;place-items:center;color:#8997aa;font-size:.86rem}
+  .check.pop{animation:checkPop .55s cubic-bezier(.2,1.7,.3,1)}
+  @keyframes checkPop{0%{transform:scale(.65) rotate(-18deg)}55%{transform:scale(1.28) rotate(8deg)}100%{transform:scale(1) rotate(0)}}
+
+  .celebrationLayer{position:fixed;inset:0;pointer-events:none;z-index:9999;overflow:hidden}
+  .fxParticle{position:absolute;left:50%;top:50%;will-change:transform,opacity;animation-fill-mode:forwards}
+  .fx-ring{width:28px;height:28px;border:4px solid var(--green);border-radius:50%;animation:ringBurst .9s ease-out forwards}
+  .fx-spark{width:8px;height:22px;border-radius:999px;background:var(--gold);transform-origin:50% 100%;animation:sparkBurst .95s ease-out forwards}
+  .fx-dot{width:10px;height:10px;border-radius:50%;background:var(--blue2);animation:dotBurst 1s ease-out forwards}
+  .fx-star{font-size:24px;line-height:1;animation:starBurst 1.05s cubic-bezier(.18,.8,.28,1) forwards}
+  .fx-confetti{width:9px;height:18px;border-radius:3px;background:var(--red);animation:confettiBurst 1.25s cubic-bezier(.15,.7,.25,1) forwards}
+  .fx-wave{width:12px;height:12px;border-radius:50%;background:var(--green);animation:waveBurst 1s ease-out forwards}
+  .fx-orbit{width:9px;height:9px;border-radius:50%;background:var(--gold);animation:orbitBurst 1.15s ease-out forwards}
+  .fx-ribbon{width:7px;height:34px;border-radius:8px;background:linear-gradient(var(--blue),var(--green));animation:ribbonBurst 1.2s ease-out forwards}
+  @keyframes ringBurst{0%{transform:translate(-50%,-50%) scale(.25);opacity:1}100%{transform:translate(-50%,-50%) scale(7);opacity:0}}
+  @keyframes sparkBurst{0%{transform:translate(-50%,-50%) rotate(var(--r)) translateY(-8px) scaleY(.25);opacity:1}100%{transform:translate(-50%,-50%) rotate(var(--r)) translateY(-150px) scaleY(1);opacity:0}}
+  @keyframes dotBurst{0%{transform:translate(-50%,-50%) translate(0,0) scale(.5);opacity:1}100%{transform:translate(-50%,-50%) translate(var(--x),var(--y)) scale(1.25);opacity:0}}
+  @keyframes starBurst{0%{transform:translate(-50%,-50%) translate(0,0) rotate(0) scale(.2);opacity:0}20%{opacity:1}100%{transform:translate(-50%,-50%) translate(var(--x),var(--y)) rotate(var(--rot)) scale(1.2);opacity:0}}
+  @keyframes confettiBurst{0%{transform:translate(-50%,-50%) translate(0,0) rotate(0);opacity:1}100%{transform:translate(-50%,-50%) translate(var(--x),var(--y)) rotate(var(--rot));opacity:0}}
+  @keyframes waveBurst{0%{transform:translate(-50%,-50%) rotate(var(--r)) translateX(0) scale(1);opacity:1}45%{opacity:1}100%{transform:translate(-50%,-50%) rotate(var(--r)) translateX(170px) scale(.25);opacity:0}}
+  @keyframes orbitBurst{0%{transform:translate(-50%,-50%) rotate(var(--r)) translateX(24px) scale(.5);opacity:1}100%{transform:translate(-50%,-50%) rotate(calc(var(--r) + 460deg)) translateX(150px) scale(1.1);opacity:0}}
+  @keyframes ribbonBurst{0%{transform:translate(-50%,-50%) translate(0,0) rotate(var(--rot)) scaleY(.2);opacity:1}100%{transform:translate(-50%,-50%) translate(var(--x),var(--y)) rotate(calc(var(--rot) + 360deg)) scaleY(1);opacity:0}}
+  @media (prefers-reduced-motion: reduce){.fxParticle,.check.pop{animation-duration:.01ms!important}.collapseBtn{transition:none}}
+  .empty{padding:48px 22px;text-align:center;border:1px solid var(--line);background:rgba(255,255,255,.035);border-radius:22px;color:var(--muted)}
+  .emptyIcon{font-size:2.4rem;margin-bottom:9px}.empty h3{color:var(--text);margin:0 0 7px}.empty p{margin:0;line-height:1.5}
+  .bonusLabel{margin:26px 4px 8px;color:#cdd9e9;font-size:.84rem;font-weight:900;letter-spacing:.08em;text-transform:uppercase}
+  .player{
+    position:fixed;left:50%;bottom:max(14px,env(safe-area-inset-bottom));transform:translateX(-50%);width:min(940px,calc(100% - 22px));z-index:50;
+    border:1px solid rgba(255,255,255,.12);background:rgba(8,16,28,.92);backdrop-filter:blur(20px);border-radius:22px;box-shadow:0 22px 70px rgba(0,0,0,.5);padding:12px 14px;display:none
+  }
+  .playerTop{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center}.now{min-width:0}.now b,.now span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.now span{color:var(--muted);font-size:.76rem;margin-top:3px}
+  .playerControls{display:flex;align-items:center;gap:8px}.round{width:38px;height:38px;border-radius:12px;border:1px solid var(--line);background:rgba(255,255,255,.06);display:grid;place-items:center;cursor:pointer}.round.main{width:46px;height:46px;background:linear-gradient(135deg,#3978df,#5fa8ff);border:0;font-size:1.05rem}
+  .timeline{display:grid;grid-template-columns:42px minmax(0,1fr) 42px;gap:8px;align-items:center;margin-top:10px;color:var(--muted);font-size:.72rem}.timeline input{width:100%;accent-color:var(--blue)}
+  .speed{appearance:none;border:1px solid var(--line);background:rgba(255,255,255,.06);color:var(--text);border-radius:10px;padding:7px 8px;font-weight:800}
+  .modalBackdrop{position:fixed;inset:0;background:rgba(1,4,11,.68);z-index:100;display:none;align-items:flex-end;justify-content:center;padding:16px}
+  .modal{width:min(620px,100%);background:#101a2b;border:1px solid var(--line);border-radius:24px;padding:22px;box-shadow:var(--shadow)}
+  .modal h3{margin:0 0 10px}.modal p{color:var(--muted);line-height:1.5;font-size:.92rem}.modalActions{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:16px}
+  .hidden{display:none!important}
+  @media(max-width:680px){
+    .shell{padding:14px 12px 36px}.hero{padding:22px 18px}.heroGrid{grid-template-columns:1fr}.statCard{min-height:auto;display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:end}.statNum{font-size:1.7rem}.toolbar{gap:8px}.spacer{display:none}.searchWrap{order:3;flex-basis:100%}.lesson{grid-template-columns:44px minmax(0,1fr) 32px;padding:12px}.player{padding:11px}.playerTop{grid-template-columns:minmax(0,1fr)}.playerControls{justify-content:center}.miniProg{width:84px}.sectionHead{padding:15px}.levelBadge{width:42px;height:42px;border-radius:13px}}
+</style>
+</head>
+<body>
+<div class="shell">
+  <section class="hero">
+    <div class="heroGrid">
+      <div>
+        <div class="eyebrow"><span class="flag"><i></i><i></i><i></i></span> Offline French dashboard</div>
+        <h1>Bonjour, progress. 🇫🇷</h1>
+        <p class="subtitle">Your Pimsleur library, neatly sorted. Finish the current lesson to unlock the next one. Each completion moves the path forward.</p>
+        <div class="bigProgress">
+          <div class="progressTop"><span id="overallText">0 of 0 lessons complete</span><span id="overallPct">0%</span></div>
+          <div class="progressTrack"><div class="progressFill" id="overallBar"></div></div>
+        </div>
+      </div>
+      <div class="statCard"><div class="statNum" id="totalHours">0h</div><div class="statLabel">audio loaded</div></div>
+    </div>
+  </section>
+
+  <div class="toolbar">
+    <button class="btn primary" id="connectBtn">📁 Connect French folder</button>
+    <button class="btn small" id="exportBtn" title="Save a backup of your checkmarks and resume points">⇩ Export progress</button>
+    <button class="btn small" id="importBtn">⇧ Import progress</button>
+    <div class="spacer"></div>
+    <div class="seg" aria-label="Lesson filter">
+      <button data-filter="all" class="active">All</button>
+      <button data-filter="open">Not finished</button>
+      <button data-filter="done">Completed</button>
+    </div>
+    <div class="searchWrap"><span class="searchIcon">⌕</span><input id="search" type="search" placeholder="Find a lesson or folder…" /></div>
+  </div>
+
+  <div class="notice" id="notice"><b>First time:</b> tap “Connect French folder” and choose the <b>French</b> folder shown in your screenshot. This page will scan every subfolder, including Levels I–V and bonus folders. Progress, resume points, and each section’s collapsed/expanded state stay saved on this device.</div>
+
+  <div class="continueCard" id="continueCard">
+    <div class="continueIcon">▶</div>
+    <div class="continueText"><b id="continueName"></b><span id="continueMeta"></span></div>
+  </div>
+
+  <main id="library">
+    <div class="empty" id="emptyState">
+      <div class="emptyIcon">🎧</div>
+      <h3>Your lessons are ready to move in.</h3>
+      <p>Connect the main <b>French</b> folder once. The tracker will organize Levels I–V first, then place any other audio folders under Bonus &amp; Extras.</p>
+    </div>
+  </main>
+</div>
+
+<div class="celebrationLayer" id="celebrationLayer" aria-hidden="true"></div>
+
+<div class="player" id="player">
+  <div class="playerTop">
+    <div class="now"><b id="nowTitle">Nothing playing</b><span id="nowFolder"></span></div>
+    <div class="playerControls">
+      <button class="round" id="prevBtn" aria-label="Previous lesson">⏮</button>
+      <button class="round main" id="playBtn" aria-label="Play or pause">▶</button>
+      <button class="round" id="nextBtn" aria-label="Next lesson">⏭</button>
+      <select class="speed" id="speed" aria-label="Playback speed">
+        <option value="0.8">0.8×</option><option value="0.9">0.9×</option><option value="1" selected>1×</option><option value="1.1">1.1×</option><option value="1.2">1.2×</option><option value="1.5">1.5×</option>
+      </select>
+    </div>
+  </div>
+  <div class="timeline"><span id="timeNow">0:00</span><input type="range" id="seek" min="0" max="1000" value="0" /><span id="timeTotal">0:00</span></div>
+</div>
+
+<input id="folderInput" type="file" webkitdirectory directory multiple accept="audio/*,.mp3,.m4a,.aac,.wav,.ogg,.flac" class="hidden" />
+<input id="importInput" type="file" accept="application/json,.json" class="hidden" />
+<audio id="audio" preload="metadata"></audio>
+
+<div class="modalBackdrop" id="resetModal">
+  <div class="modal">
+    <h3>Clear saved progress?</h3>
+    <p>This removes completion checkmarks and saved resume positions from this device. It does not touch your audio files.</p>
+    <div class="modalActions"><button class="btn" id="cancelReset">Cancel</button><button class="btn danger" id="confirmReset">Clear progress</button></div>
+  </div>
+</div>
+
+<script>
+(() => {
+  'use strict';
+
+  const AUDIO_EXT = /\.(mp3|m4a|aac|wav|ogg|flac|opus)$/i;
+  const STORE_KEY = 'pimsleurFrenchTracker.v2';
+  const HANDLE_DB = 'pimsleurFrenchTrackerHandles';
+  const HANDLE_STORE = 'handles';
+  const HANDLE_KEY = 'frenchRoot';
+
+  const els = {
+    connectBtn: document.getElementById('connectBtn'), folderInput: document.getElementById('folderInput'),
+    library: document.getElementById('library'), empty: document.getElementById('emptyState'),
+    overallText: document.getElementById('overallText'), overallPct: document.getElementById('overallPct'), overallBar: document.getElementById('overallBar'),
+    totalHours: document.getElementById('totalHours'), search: document.getElementById('search'), notice: document.getElementById('notice'),
+    player: document.getElementById('player'), audio: document.getElementById('audio'), nowTitle: document.getElementById('nowTitle'), nowFolder: document.getElementById('nowFolder'),
+    playBtn: document.getElementById('playBtn'), prevBtn: document.getElementById('prevBtn'), nextBtn: document.getElementById('nextBtn'),
+    seek: document.getElementById('seek'), timeNow: document.getElementById('timeNow'), timeTotal: document.getElementById('timeTotal'), speed: document.getElementById('speed'),
+    exportBtn: document.getElementById('exportBtn'), importBtn: document.getElementById('importBtn'), importInput: document.getElementById('importInput'),
+    continueCard: document.getElementById('continueCard'), continueName: document.getElementById('continueName'), continueMeta: document.getElementById('continueMeta')
+  };
+
+  let lessons = [];
+  let urls = new Map();
+  let currentIndex = -1;
+  let filter = 'all';
+  let totalDuration = 0;
+  let durationKnown = new Set();
+  let saveTimer = 0;
+
+  let state = loadState();
+
+  function loadState(){
+    try {
+      const raw = localStorage.getItem(STORE_KEY);
+      const parsed = raw ? JSON.parse(raw) : {};
+      return { completed: parsed.completed || {}, positions: parsed.positions || {}, last: parsed.last || null, speed: Number(parsed.speed || 1), collapsed: parsed.collapsed || {}, celebrationCount: Number(parsed.celebrationCount || 0) };
+    } catch { return { completed:{}, positions:{}, last:null, speed:1, collapsed:{}, celebrationCount:0 }; }
+  }
+  function saveState(){
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch {}
+  }
+  function safePath(s){ return String(s || '').replace(/\\/g,'/').replace(/^\/+/, ''); }
+  function baseName(path){ return safePath(path).split('/').pop() || path; }
+  function prettyFile(name){
+    return name.replace(/\.(mp3|m4a|aac|wav|ogg|flac|opus)$/i,'').replace(/[_]+/g,' ').replace(/\s+/g,' ').trim();
+  }
+  function natural(a,b){ return a.localeCompare(b, undefined, {numeric:true, sensitivity:'base'}); }
+  function lessonNumber(text){
+    const m = String(text).match(/(?:lesson|unit|track|session)\s*[-_.:]?\s*(\d{1,3})/i) || String(text).match(/(?:^|\D)(\d{1,3})(?:\D|$)/);
+    return m ? Number(m[1]) : 9999;
+  }
+  function romanLevel(folder){
+    const s = folder.toLowerCase();
+    if (/^\s*0?1\b/.test(s) || /french\s*i\b/i.test(folder)) return 1;
+    if (/^\s*0?2\b/.test(s) || /french\s*ii\b/i.test(folder)) return 2;
+    if (/^\s*0?3\b/.test(s) || /french\s*iii\b/i.test(folder)) return 3;
+    if (/^\s*0?4\b/.test(s) || /french\s*iv\b/i.test(folder)) return 4;
+    if (/^\s*0?5\b/.test(s) || /french\s*v\b/i.test(folder)) return 5;
+    return null;
+  }
+  function groupFolder(relativePath){
+    const parts = safePath(relativePath).split('/').filter(Boolean);
+    if (parts.length <= 1) return 'Loose Audio';
+    // webkitRelativePath normally starts with the selected root folder. Drop it.
+    return parts.length >= 3 ? parts.slice(1,-1).join(' › ') : parts[0];
+  }
+  function stableKey(relativePath, file){
+    const path = safePath(relativePath || file.name);
+    return `${path}|${file.size || 0}`;
+  }
+  function formatTime(sec){
+    if (!Number.isFinite(sec) || sec < 0) return '0:00';
+    const s = Math.floor(sec % 60), m = Math.floor(sec / 60) % 60, h = Math.floor(sec / 3600);
+    return h ? `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}` : `${m}:${String(s).padStart(2,'0')}`;
+  }
+  function esc(s){ return String(s).replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c])); }
+
+  function firstIncompleteIndex(){
+    const i = lessons.findIndex(l => !state.completed[l.key]);
+    return i < 0 ? lessons.length : i;
+  }
+  function isLockedIndex(i){
+    if(i < 0 || i >= lessons.length) return true;
+    if(state.completed[lessons[i].key]) return false;
+    return i > firstIncompleteIndex();
+  }
+  function isNextUpIndex(i){ return i === firstIncompleteIndex() && i < lessons.length; }
+  function toggleSection(folder){
+    state.collapsed = state.collapsed || {};
+    state.collapsed[folder] = !state.collapsed[folder];
+    saveState();
+    render();
+  }
+  function mulberry32(seed){
+    return function(){ let t = seed += 0x6D2B79F5; t = Math.imul(t ^ t >>> 15, t | 1); t ^= t + Math.imul(t ^ t >>> 7, t | 61); return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+  }
+  function celebrate(anchorEl){
+    const layer = document.getElementById('celebrationLayer');
+    if(!layer) return;
+    state.celebrationCount = Number(state.celebrationCount || 0) + 1;
+    const n = state.celebrationCount;
+    saveState();
+    const rect = anchorEl?.getBoundingClientRect?.();
+    const cx = rect ? rect.left + rect.width/2 : innerWidth/2;
+    const cy = rect ? rect.top + rect.height/2 : innerHeight/2;
+    const rand = mulberry32(7331 + n * 7919);
+    const variant = (n - 1) % 8;
+    const types = ['ring','spark','dot','star','confetti','wave','orbit','ribbon'];
+    const type = types[variant];
+    const count = type === 'ring' ? 3 : (type === 'star' ? 13 : 20);
+    const glyphs = ['✦','★','✧','◆','✶'];
+    for(let i=0;i<count;i++){
+      const p = document.createElement('span');
+      p.className = `fxParticle fx-${type}`;
+      p.style.left = `${cx}px`; p.style.top = `${cy}px`;
+      const ang = (i / Math.max(1,count)) * Math.PI * 2 + rand()*.4;
+      const dist = 70 + rand()*125;
+      p.style.setProperty('--x', `${Math.cos(ang)*dist}px`);
+      p.style.setProperty('--y', `${Math.sin(ang)*dist - 20}px`);
+      p.style.setProperty('--r', `${Math.round(ang*180/Math.PI)}deg`);
+      p.style.setProperty('--rot', `${Math.round((rand()-.5)*620)}deg`);
+      p.style.animationDelay = `${(rand()*.12).toFixed(3)}s`;
+      if(type==='star') p.textContent = glyphs[(i+n)%glyphs.length];
+      if(type==='confetti' || type==='dot' || type==='spark' || type==='orbit'){
+        const palette=['var(--blue)','var(--blue2)','var(--green)','var(--gold)','var(--red)'];
+        p.style.background = palette[(i+n)%palette.length];
+      }
+      layer.appendChild(p);
+      setTimeout(()=>p.remove(), 1500);
+    }
+    if(anchorEl){ anchorEl.classList.remove('pop'); void anchorEl.offsetWidth; anchorEl.classList.add('pop'); }
+  }
+  function completeLesson(key, anchorEl, fromAudio=false){
+    const i = lessons.findIndex(l => l.key === key);
+    if(i < 0 || isLockedIndex(i)) return false;
+    const wasDone = !!state.completed[key];
+    if(wasDone && !fromAudio){
+      delete state.completed[key];
+      saveState(); render(); updateContinueCard();
+      return true;
+    }
+    if(!wasDone){
+      state.completed[key] = true;
+      delete state.positions[key];
+      state.last = lessons[i+1]?.key || key;
+      celebrate(anchorEl);
+      saveState(); render(); updateContinueCard();
+    }
+    return true;
+  }
+
+  function cleanupUrls(){ for (const u of urls.values()) URL.revokeObjectURL(u); urls.clear(); }
+
+  async function filesFromHandle(rootHandle){
+    const out = [];
+    async function walk(dir, path){
+      for await (const [name, handle] of dir.entries()) {
+        const p = path ? `${path}/${name}` : name;
+        if (handle.kind === 'file') {
+          if (AUDIO_EXT.test(name)) {
+            const file = await handle.getFile();
+            out.push({file, relativePath:`${rootHandle.name}/${p}`});
+          }
+        } else if (handle.kind === 'directory') await walk(handle, p);
+      }
+    }
+    await walk(rootHandle, '');
+    return out;
+  }
+
+  function openDB(){
+    return new Promise((resolve,reject)=>{
+      const req = indexedDB.open(HANDLE_DB,1);
+      req.onupgradeneeded = () => req.result.createObjectStore(HANDLE_STORE);
+      req.onsuccess = () => resolve(req.result); req.onerror = () => reject(req.error);
+    });
+  }
+  async function putHandle(handle){ try { const db=await openDB(); await new Promise((res,rej)=>{ const tx=db.transaction(HANDLE_STORE,'readwrite'); tx.objectStore(HANDLE_STORE).put(handle,HANDLE_KEY); tx.oncomplete=res; tx.onerror=()=>rej(tx.error);}); db.close(); } catch {} }
+  async function getHandle(){ try { const db=await openDB(); const value=await new Promise((res,rej)=>{ const tx=db.transaction(HANDLE_STORE,'readonly'); const r=tx.objectStore(HANDLE_STORE).get(HANDLE_KEY); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error);}); db.close(); return value; } catch { return null; } }
+
+  async function connect(){
+    try {
+      if ('showDirectoryPicker' in window) {
+        const handle = await window.showDirectoryPicker({mode:'read'});
+        await putHandle(handle);
+        const entries = await filesFromHandle(handle);
+        loadEntries(entries);
+      } else {
+        els.folderInput.click();
+      }
+    } catch (err) {
+      if (err && err.name !== 'AbortError') els.folderInput.click();
+    }
+  }
+
+  function loadEntries(entries){
+    cleanupUrls();
+    currentIndex = -1;
+    els.audio.pause(); els.audio.removeAttribute('src');
+
+    lessons = entries
+      .filter(x => AUDIO_EXT.test(x.file.name))
+      .map(x => {
+        const path = safePath(x.relativePath || x.file.webkitRelativePath || x.file.name);
+        const folder = groupFolder(path);
+        return { file:x.file, path, folder, name:prettyFile(x.file.name), key:stableKey(path,x.file), size:x.file.size || 0, duration:0 };
+      })
+      .sort((a,b) => {
+        const la=romanLevel(a.folder), lb=romanLevel(b.folder);
+        const ga=la ?? 99, gb=lb ?? 99;
+        if (ga !== gb) return ga-gb;
+        const f=natural(a.folder,b.folder); if(f) return f;
+        const na=lessonNumber(a.name), nb=lessonNumber(b.name); if(na!==nb) return na-nb;
+        return natural(a.name,b.name);
+      });
+
+    lessons.forEach(l => urls.set(l.key, URL.createObjectURL(l.file)));
+    totalDuration = 0; durationKnown.clear();
+    els.notice.innerHTML = lessons.length
+      ? `<b>Connected:</b> ${lessons.length} audio files found across ${new Set(lessons.map(l=>l.folder)).size} folder${new Set(lessons.map(l=>l.folder)).size===1?'':'s'}. Your current lesson is unlocked; completing it unlocks exactly one next lesson.`
+      : `<b>No audio found.</b> Choose the main French folder that contains your Pimsleur subfolders.`;
+    render();
+    probeDurations();
+    updateContinueCard();
+  }
+
+  function probeDurations(){
+    // Read metadata a few at a time without loading full audio.
+    const queue = lessons.slice();
+    let active = 0;
+    const launch = () => {
+      while(active < 3 && queue.length){
+        const l = queue.shift(); active++;
+        const a = document.createElement('audio'); a.preload='metadata'; a.src=urls.get(l.key);
+        const finish = () => { active--; a.src=''; launch(); };
+        a.onloadedmetadata=()=>{ if(Number.isFinite(a.duration)){ l.duration=a.duration; if(!durationKnown.has(l.key)){durationKnown.add(l.key); totalDuration += a.duration;} updateStats(); } finish(); };
+        a.onerror=finish;
+      }
+    }; launch();
+  }
+
+  function updateStats(){
+    const done = lessons.filter(l=>state.completed[l.key]).length;
+    const total = lessons.length;
+    const pct = total ? Math.round(done/total*100) : 0;
+    els.overallText.textContent = `${done} of ${total} lesson${total===1?'':'s'} complete`;
+    els.overallPct.textContent = `${pct}%`;
+    els.overallBar.style.width = `${pct}%`;
+    const hours = totalDuration/3600;
+    els.totalHours.textContent = totalDuration ? (hours >= 10 ? `${Math.round(hours)}h` : `${hours.toFixed(1)}h`) : (total ? '…' : '0h');
+    document.querySelectorAll('.section').forEach(sec=>{
+      const folder = sec.dataset.folder;
+      const set = lessons.filter(l=>l.folder===folder);
+      const d = set.filter(l=>state.completed[l.key]).length;
+      const p = set.length ? Math.round(d/set.length*100) : 0;
+      const fill=sec.querySelector('.miniProg .progressFill'), pctEl=sec.querySelector('.miniProg .pct');
+      if(fill) fill.style.width=`${p}%`; if(pctEl) pctEl.textContent=`${d}/${set.length}`;
+    });
+  }
+
+  function render(){
+    const q = els.search.value.trim().toLowerCase();
+    const visible = lessons.filter(l => {
+      const status = state.completed[l.key] ? 'done' : 'open';
+      if (filter !== 'all' && filter !== status) return false;
+      return !q || `${l.name} ${l.folder}`.toLowerCase().includes(q);
+    });
+
+    if (!lessons.length){ els.library.innerHTML=''; els.library.appendChild(els.empty); els.empty.classList.remove('hidden'); updateStats(); return; }
+    els.empty.classList.add('hidden');
+    const byFolder = new Map();
+    visible.forEach(l=>{ if(!byFolder.has(l.folder)) byFolder.set(l.folder,[]); byFolder.get(l.folder).push(l); });
+
+    const main = [], bonus=[];
+    [...byFolder.entries()].forEach(([folder,items]) => (romanLevel(folder) ? main : bonus).push([folder,items]));
+    main.sort((a,b)=>romanLevel(a[0])-romanLevel(b[0])); bonus.sort((a,b)=>natural(a[0],b[0]));
+
+    let html='';
+    const sectionHtml = ([folder,items]) => {
+      const lvl=romanLevel(folder); const allForFolder=lessons.filter(l=>l.folder===folder); const done=allForFolder.filter(l=>state.completed[l.key]).length; const pct=allForFolder.length?Math.round(done/allForFolder.length*100):0;
+      const badge = lvl ? ['I','II','III','IV','V'][lvl-1] : '★';
+      const collapsed = !q && !!(state.collapsed && state.collapsed[folder]);
+      const lessonRows = items.map(l=>{
+        const globalIndex=lessons.findIndex(x=>x.key===l.key); const isPlaying=globalIndex===currentIndex; const done=!!state.completed[l.key]; const pos=state.positions[l.key]||0;
+        const locked=isLockedIndex(globalIndex), nextUp=isNextUpIndex(globalIndex);
+        const statusText = locked ? 'Locked • Finish the previous lesson' : (nextUp && !done ? 'Up next • Unlocked' : '');
+        const meta=[folder, l.duration ? formatTime(l.duration) : '', pos>10&&!done ? `Resume ${formatTime(pos)}` : '', statusText].filter(Boolean).join(' • ');
+        const right = locked
+          ? `<span class="lockPill" title="Locked until the previous lesson is complete" aria-label="Locked">🔒</span>`
+          : `<button class="check ${done?'done':''}" data-check="${esc(l.key)}" aria-label="${done?'Mark incomplete':'Mark complete'}">✓</button>`;
+        return `<div class="lesson ${isPlaying?'playing':''} ${locked?'locked':''} ${nextUp?'nextUp':''}" data-key="${esc(l.key)}" data-index="${globalIndex}" aria-disabled="${locked?'true':'false'}">
+          <div class="playCircle">${locked?'🔒':(isPlaying && !els.audio.paused ? '❚❚' : '▶')}</div>
+          <div><div class="lessonName">${esc(l.name)}</div><div class="lessonMeta">${esc(meta)}</div></div>
+          ${right}
+        </div>`;
+      }).join('');
+      return `<section class="section ${collapsed?'collapsed':''}" data-folder="${esc(folder)}"><div class="sectionHead" data-toggle-folder="${esc(folder)}" tabindex="0" role="button" aria-expanded="${collapsed?'false':'true'}"><div class="levelBadge">${badge}</div><div class="sectionTitle"><h2>${esc(folder)}</h2><p>${allForFolder.length} audio file${allForFolder.length===1?'':'s'} • ${collapsed?'Collapsed':'Expanded'}</p></div><div class="miniProg"><div class="progressTrack"><div class="progressFill" style="width:${pct}%"></div></div><div class="pct">${done}/${allForFolder.length}</div></div><button class="collapseBtn" tabindex="-1" aria-hidden="true">⌄</button></div><div class="lessonList">${lessonRows}</div></section>`;
+    };
+    main.forEach(g=>html+=sectionHtml(g));
+    if(bonus.length){ html += `<div class="bonusLabel">Bonus &amp; Extras</div>`; bonus.forEach(g=>html+=sectionHtml(g)); }
+    if(!visible.length) html=`<div class="empty"><div class="emptyIcon">🔎</div><h3>No matches</h3><p>Try another search or change the completion filter.</p></div>`;
+    els.library.innerHTML=html;
+    bindRows(); updateStats();
+  }
+
+  function bindRows(){
+    els.library.querySelectorAll('[data-toggle-folder]').forEach(head=>{
+      const run=()=>toggleSection(head.dataset.toggleFolder);
+      head.addEventListener('click',e=>{ if(e.target.closest('[data-check]')) return; run(); });
+      head.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){e.preventDefault();run();} });
+    });
+    els.library.querySelectorAll('.lesson').forEach(row=>{
+      row.addEventListener('click', e=>{
+        if(e.target.closest('[data-check]')) return;
+        const i=Number(row.dataset.index);
+        if(isLockedIndex(i)) return;
+        playIndex(i);
+      });
+    });
+    els.library.querySelectorAll('[data-check]').forEach(btn=>btn.addEventListener('click',e=>{
+      e.stopPropagation();
+      const key=btn.dataset.check;
+      const i=lessons.findIndex(l=>l.key===key);
+      if(isLockedIndex(i)) return;
+      completeLesson(key, btn, false);
+    }));
+  }
+
+  function playIndex(i){
+    if(i<0||i>=lessons.length || isLockedIndex(i)) return;
+    const same = currentIndex===i;
+    if(same){ if(els.audio.paused) els.audio.play().catch(()=>{}); else els.audio.pause(); syncPlayer(); return; }
+    saveCurrentPosition();
+    currentIndex=i; const l=lessons[i];
+    els.audio.src=urls.get(l.key); els.audio.playbackRate=Number(els.speed.value)||1;
+    els.audio.onloadedmetadata=()=>{
+      const saved=Number(state.positions[l.key]||0); if(saved>2 && saved < els.audio.duration-3) els.audio.currentTime=saved;
+      els.timeTotal.textContent=formatTime(els.audio.duration); syncPlayer();
+    };
+    state.last=l.key; saveState();
+    els.player.style.display='block'; els.nowTitle.textContent=l.name; els.nowFolder.textContent=l.folder;
+    els.audio.play().catch(()=>{}); render(); updateContinueCard();
+  }
+
+  function syncPlayer(){
+    els.playBtn.textContent=els.audio.paused?'▶':'❚❚';
+    if(currentIndex>=0){
+      const l=lessons[currentIndex]; els.nowTitle.textContent=l.name; els.nowFolder.textContent=l.folder;
+      document.querySelectorAll('.lesson').forEach(r=>{
+        const active=Number(r.dataset.index)===currentIndex; r.classList.toggle('playing',active); const icon=r.querySelector('.playCircle'); if(icon) icon.textContent=active&&!els.audio.paused?'❚❚':'▶';
+      });
+    }
+  }
+  function saveCurrentPosition(){
+    if(currentIndex<0) return; const l=lessons[currentIndex];
+    if(Number.isFinite(els.audio.currentTime) && els.audio.currentTime>0){ state.positions[l.key]=Math.floor(els.audio.currentTime); state.last=l.key; saveState(); }
+  }
+  function updateContinueCard(){
+    if(!state.last || !lessons.length){els.continueCard.style.display='none';return;}
+    const i=lessons.findIndex(l=>l.key===state.last); if(i<0 || state.completed[state.last]){els.continueCard.style.display='none';return;}
+    const l=lessons[i], pos=state.positions[l.key]||0; els.continueName.textContent=`Continue: ${l.name}`; els.continueMeta.textContent=`${l.folder}${pos>0?` • ${formatTime(pos)} saved`:''}`; els.continueCard.style.display='flex'; els.continueCard.onclick=()=>playIndex(i);
+  }
+
+  els.connectBtn.addEventListener('click',connect);
+  els.folderInput.addEventListener('change',()=>{
+    const entries=[...els.folderInput.files].map(file=>({file,relativePath:file.webkitRelativePath||file.name})); loadEntries(entries); els.folderInput.value='';
+  });
+  els.search.addEventListener('input',render);
+  document.querySelectorAll('.seg button').forEach(b=>b.addEventListener('click',()=>{ document.querySelectorAll('.seg button').forEach(x=>x.classList.remove('active')); b.classList.add('active'); filter=b.dataset.filter; render(); }));
+  els.playBtn.addEventListener('click',()=>{ if(currentIndex<0){ if(lessons.length) playIndex(Math.min(firstIncompleteIndex(),lessons.length-1)); return;} if(els.audio.paused) els.audio.play().catch(()=>{}); else els.audio.pause(); });
+  els.prevBtn.addEventListener('click',()=>{ for(let i=currentIndex-1;i>=0;i--){ if(!isLockedIndex(i)){playIndex(i);break;} } });
+  els.nextBtn.addEventListener('click',()=>{ const i=currentIndex+1; if(i<lessons.length && !isLockedIndex(i)) playIndex(i); });
+  els.speed.value=String(state.speed||1);
+  els.speed.addEventListener('change',()=>{ const v=Number(els.speed.value)||1; els.audio.playbackRate=v; state.speed=v; saveState(); });
+  els.audio.addEventListener('play',syncPlayer); els.audio.addEventListener('pause',()=>{saveCurrentPosition();syncPlayer();});
+  els.audio.addEventListener('timeupdate',()=>{
+    const d=els.audio.duration||0, t=els.audio.currentTime||0; els.timeNow.textContent=formatTime(t); els.timeTotal.textContent=formatTime(d); els.seek.value=d?String(Math.round(t/d*1000)):'0';
+    clearTimeout(saveTimer); saveTimer=setTimeout(saveCurrentPosition,900);
+  });
+  els.seek.addEventListener('input',()=>{ const d=els.audio.duration||0; if(d) els.audio.currentTime=(Number(els.seek.value)/1000)*d; });
+  els.audio.addEventListener('ended',()=>{
+    if(currentIndex<0)return;
+    const l=lessons[currentIndex];
+    const rowCheck=[...document.querySelectorAll('[data-check]')].find(b=>b.dataset.check===l.key) || null;
+    completeLesson(l.key,rowCheck,true);
+    // Stop after completion so moving to the newly unlocked lesson is intentional.
+    syncPlayer();
+  });
+
+  els.exportBtn.addEventListener('click',()=>{
+    const payload={app:'Pimsleur French Tracker',version:3,exportedAt:new Date().toISOString(),state};
+    const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='pimsleur-french-progress.json'; a.click(); setTimeout(()=>URL.revokeObjectURL(url),1500);
+  });
+  els.importBtn.addEventListener('click',()=>els.importInput.click());
+  els.importInput.addEventListener('change',async()=>{
+    const f=els.importInput.files[0]; if(!f)return;
+    try{ const data=JSON.parse(await f.text()); const s=data.state||data; if(!s.completed||!s.positions)throw new Error(); state={completed:s.completed||{},positions:s.positions||{},last:s.last||null,speed:Number(s.speed||1),collapsed:s.collapsed||{},celebrationCount:Number(s.celebrationCount||0)}; els.speed.value=String(state.speed||1); saveState(); render(); updateContinueCard(); els.notice.innerHTML='<b>Progress imported.</b> Your saved checkmarks and resume points are now loaded.'; }
+    catch{ els.notice.innerHTML='<b>Could not import that file.</b> Choose a progress JSON previously exported by this tracker.'; }
+    els.importInput.value='';
+  });
+
+  window.addEventListener('beforeunload',()=>{saveCurrentPosition();cleanupUrls();});
+  document.addEventListener('visibilitychange',()=>{if(document.hidden)saveCurrentPosition();});
+
+  // Try to reconnect a previously granted desktop directory handle. If permission is not already granted,
+  // we deliberately do not trigger a browser permission prompt on page load.
+  (async()=>{
+    if(!('showDirectoryPicker' in window)) return;
+    const handle=await getHandle(); if(!handle)return;
+    try{
+      const perm=await handle.queryPermission({mode:'read'});
+      if(perm==='granted'){ const entries=await filesFromHandle(handle); loadEntries(entries); }
+      else els.notice.innerHTML='<b>Saved library found.</b> Tap “Connect French folder” to give this page access again.';
+    }catch{}
+  })();
+})();
+</script>
+</body>
+</html>
