@@ -187,7 +187,7 @@
           <div class="progressTrack"><div class="progressFill" id="overallBar"></div></div>
         </div>
       </div>
-      <div class="statCard"><div class="statNum" id="totalHours">0</div><div class="statLabel">audio files loaded</div></div>
+      <div class="statCard"><div class="statNum" id="totalHours">0h</div><div class="statLabel">total listening time</div></div>
     </div>
   </section>
 
@@ -561,9 +561,15 @@
     els.overallText.textContent = `${done} of ${total} lesson${total===1?'':'s'} complete`;
     els.overallPct.textContent = `${pct}%`;
     els.overallBar.style.width = `${pct}%`;
-    // This stat is intentionally the track count, not total duration. It is instant and
-    // remains correct after a refresh even before the browser restores local-file access.
-    els.totalHours.textContent = String(total);
+    const knownDuration = lessons.reduce((sum,l)=>sum + (Number(l.duration)||0),0);
+    const seconds = totalDuration > 0 ? totalDuration : knownDuration;
+    if(seconds > 0){
+      const hours = Math.floor(seconds / 3600);
+      const minutes = Math.round((seconds % 3600) / 60);
+      els.totalHours.textContent = minutes >= 60 ? `${hours + 1}h` : (minutes ? `${hours}h ${minutes}m` : `${hours}h`);
+    } else {
+      els.totalHours.textContent = '…';
+    }
     document.querySelectorAll('.section').forEach(sec=>{
       const folder = sec.dataset.folder;
       const set = lessons.filter(l=>l.folder===folder);
