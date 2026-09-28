@@ -255,6 +255,7 @@
 
   const AUDIO_EXT = /\.(mp3|m4a|aac|wav|ogg|flac|opus)$/i;
   const STORE_KEY = 'pimsleurFrenchTracker.v2';
+  const CATALOG_KEY = 'pimsleurFrenchTracker.catalog.v1';
   const HANDLE_DB = 'pimsleurFrenchTrackerHandles';
   const HANDLE_STORE = 'handles';
   const HANDLE_KEY = 'frenchRoot';
@@ -278,6 +279,9 @@
   let totalDuration = 0;
   let durationKnown = new Set();
   let saveTimer = 0;
+  let catalogSaveTimer = 0;
+  let savedRootHandle = null;
+  let cachedMode = false;
 
   let state = loadState();
 
@@ -290,6 +294,39 @@
   }
   function saveState(){
     try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch {}
+  }
+  function loadCachedCatalog(){
+    try {
+      const raw = localStorage.getItem(CATALOG_KEY);
+      const parsed = raw ? JSON.parse(raw) : [];
+      if(!Array.isArray(parsed)) return [];
+      return parsed.filter(x => x && x.key && x.path && x.name && x.folder).map(x => ({
+        file:null,
+        path:String(x.path),
+        folder:String(x.folder),
+        name:String(x.name),
+        key:String(x.key),
+        size:Number(x.size || 0),
+        duration:Number(x.duration || 0),
+        cached:true
+      }));
+    } catch { return []; }
+  }
+  function saveCatalog(){
+    try {
+      const catalog = lessons.map(l => ({
+        path:l.path, folder:l.folder, name:l.name, key:l.key,
+        size:Number(l.size || 0), duration:Number(l.duration || 0)
+      }));
+      if(catalog.length) localStorage.setItem(CATALOG_KEY, JSON.stringify(catalog));
+    } catch {}
+  }
+  function scheduleCatalogSave(){
+    clearTimeout(catalogSaveTimer);
+    catalogSaveTimer = setTimeout(saveCatalog, 500);
+  }
+  async function requestPersistentStorage(){
+    try { if(navigator.storage?.persist) await navigator.storage.persist(); } catch {}
   }
   function safePath(s){ return String(s || '').replace(/\\/g,'/').replace(/^\/+/, ''); }
   function baseName(path){ return safePath(path).split('/').pop() || path; }
@@ -430,11 +467,33 @@
   async function putHandle(handle){ try { const db=await openDB(); await new Promise((res,rej)=>{ const tx=db.transaction(HANDLE_STORE,'readwrite'); tx.objectStore(HANDLE_STORE).put(handle,HANDLE_KEY); tx.oncomplete=res; tx.onerror=()=>rej(tx.error);}); db.close(); } catch {} }
   async function getHandle(){ try { const db=await openDB(); const value=await new Promise((res,rej)=>{ const tx=db.transaction(HANDLE_STORE,'readonly'); const r=tx.objectStore(HANDLE_STORE).get(HANDLE_KEY); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error);}); db.close(); return value; } catch { return null; } }
 
+  async function restoreSavedHandle(promptForPermission=false){
+    try {
+      const handle = savedRootHandle || await getHandle();
+      if(!handle) return false;
+      savedRootHandle = handle;
+      let perm = await handle.queryPermission({mode:'read'});
+      if(perm !== 'granted' && promptForPermission && handle.requestPermission){
+        perm = await handle.requestPermission({mode:'read'});
+      }
+      if(perm !== 'granted') return false;
+      const entries = await filesFromHandle(handle);
+      loadEntries(entries);
+      await requestPersistentStorage();
+      return true;
+    } catch { return false; }
+  }
+
   async function connect(){
     try {
       if ('showDirectoryPicker' in window) {
+        // First reuse the directory handle already saved in IndexedDB. This means a refresh
+        // normally needs only a permission confirmation, not another trip through the folder picker.
+        if(await restoreSavedHandle(true)) return;
         const handle = await window.showDirectoryPicker({mode:'read'});
+        savedRootHandle = handle;
         await putHandle(handle);
+        await requestPersistentStorage();
         const entries = await filesFromHandle(handle);
         loadEntries(entries);
       } else {
@@ -447,6 +506,8 @@
 
   function loadEntries(entries){
     cleanupUrls();
+    cachedMode = false;
+    els.connectBtn.textContent = '📁 Change French folder';
     currentIndex = -1;
     els.audio.pause(); els.audio.removeAttribute('src');
 
@@ -467,6 +528,7 @@
       });
 
     lessons.forEach(l => urls.set(l.key, URL.createObjectURL(l.file)));
+    saveCatalog();
     totalDuration = 0; durationKnown.clear();
     els.notice.innerHTML = lessons.length
       ? `<b>Connected:</b> ${lessons.length} audio files found across ${new Set(lessons.map(l=>l.folder)).size} folder${new Set(lessons.map(l=>l.folder)).size===1?'':'s'}. Your current lesson is unlocked; completing it unlocks exactly one next lesson.`
@@ -485,7 +547,7 @@
         const l = queue.shift(); active++;
         const a = document.createElement('audio'); a.preload='metadata'; a.src=urls.get(l.key);
         const finish = () => { active--; a.src=''; launch(); };
-        a.onloadedmetadata=()=>{ if(Number.isFinite(a.duration)){ l.duration=a.duration; if(!durationKnown.has(l.key)){durationKnown.add(l.key); totalDuration += a.duration;} updateStats(); } finish(); };
+        a.onloadedmetadata=()=>{ if(Number.isFinite(a.duration)){ l.duration=a.duration; if(!durationKnown.has(l.key)){durationKnown.add(l.key); totalDuration += a.duration;} updateStats(); scheduleCatalogSave(); } finish(); };
         a.onerror=finish;
       }
     }; launch();
@@ -578,8 +640,25 @@
     }));
   }
 
-  function playIndex(i){
+  async function playIndex(i){
     if(i<0||i>=lessons.length || isLockedIndex(i)) return;
+    const requestedKey = lessons[i].key;
+
+    // After a page refresh we can render the whole library from the cached catalog immediately,
+    // but browsers may require a fresh user gesture before they let a website read local files.
+    // Asking here lets the user's tap on a lesson double as that permission gesture.
+    if(!urls.has(requestedKey)){
+      els.notice.innerHTML = '<b>Restoring your saved library…</b> Your lessons and progress are already cached.';
+      const restored = await restoreSavedHandle(true);
+      if(!restored){
+        els.connectBtn.textContent = '🔓 Resume French library';
+        els.notice.innerHTML = '<b>Your library is still saved.</b> Tap “Resume French library” once to restore audio access. Your lesson list, checkmarks, resume points, and collapsed sections are not lost.';
+        return;
+      }
+      i = lessons.findIndex(l => l.key === requestedKey);
+      if(i < 0 || isLockedIndex(i)) return;
+    }
+
     const same = currentIndex===i;
     if(same){ if(els.audio.paused) els.audio.play().catch(()=>{}); else els.audio.pause(); syncPlayer(); return; }
     saveCurrentPosition();
@@ -654,15 +733,35 @@
   window.addEventListener('beforeunload',()=>{saveCurrentPosition();cleanupUrls();});
   document.addEventListener('visibilitychange',()=>{if(document.hidden)saveCurrentPosition();});
 
-  // Try to reconnect a previously granted desktop directory handle. If permission is not already granted,
-  // we deliberately do not trigger a browser permission prompt on page load.
+  // Restore the cached catalog first so refreshing never makes the lesson list disappear.
+  // Audio file handles are kept separately in IndexedDB and reused whenever the browser allows it.
+  (() => {
+    const cached = loadCachedCatalog();
+    if(!cached.length) return;
+    lessons = cached;
+    cachedMode = true;
+    totalDuration = lessons.reduce((sum,l)=>sum + (Number(l.duration)||0),0);
+    durationKnown = new Set(lessons.filter(l=>l.duration>0).map(l=>l.key));
+    els.connectBtn.textContent = '🔓 Resume French library';
+    els.notice.innerHTML = '<b>Library restored from cache.</b> Your lessons, progress, resume points, and section layout survived the refresh. Tap an unlocked lesson to resume audio.';
+    render();
+    updateContinueCard();
+  })();
+
+  // Silently reuse access when the browser preserved permission. If it did not, keep the
+  // cached library visible and request permission only from the user's next tap.
   (async()=>{
     if(!('showDirectoryPicker' in window)) return;
-    const handle=await getHandle(); if(!handle)return;
+    savedRootHandle = await getHandle();
+    if(!savedRootHandle) return;
     try{
-      const perm=await handle.queryPermission({mode:'read'});
-      if(perm==='granted'){ const entries=await filesFromHandle(handle); loadEntries(entries); }
-      else els.notice.innerHTML='<b>Saved library found.</b> Tap “Connect French folder” to give this page access again.';
+      const perm=await savedRootHandle.queryPermission({mode:'read'});
+      if(perm==='granted'){
+        const entries=await filesFromHandle(savedRootHandle);
+        loadEntries(entries);
+      } else if(lessons.length) {
+        els.connectBtn.textContent = '🔓 Resume French library';
+      }
     }catch{}
   })();
 })();
