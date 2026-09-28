@@ -2099,7 +2099,8 @@ async function handleFolderFiles(files, playId = null) {
     render();
     toast(`${next.lessons.length} lessons ready. Bonne écoute !`);
     requestPersistence();
-    Probe.run();
+    await Offline.reattach();
+    Probe.run().then(() => Offline.fill());
     return;
   }
 
@@ -2120,7 +2121,7 @@ async function handleFolderFiles(files, playId = null) {
     commitProgress(true);
     render();
     toast(`Library replaced · ${next.lessons.length} lessons`);
-    Probe.run();
+    Probe.run().then(() => Offline.fill());
     return;
   }
 
@@ -2156,10 +2157,10 @@ async function handleFolderFiles(files, playId = null) {
   let msg = connected >= total ? 'Audio connected' : `Connected ${connected} of ${total} lessons`;
   if (added) msg += ` · ${added} new lesson${added === 1 ? '' : 's'} added`;
   const wanted = playId && derived.byId.get(playId);
-  if (wanted && !state.files.has(wanted.id)) msg = `Couldn’t find ${wanted.title} in ${where}`;
+  if (wanted && !hasAudio(wanted.id)) msg = `Couldn’t find ${wanted.title} in ${where}`;
   toast(msg);
-  Probe.run();
-  if (wanted && state.files.has(wanted.id)) playLesson(wanted);
+  if (wanted && hasAudio(wanted.id)) playLesson(wanted);
+  Probe.run().then(() => Offline.fill());
 }
 
 async function restorePrevious() {
@@ -2179,6 +2180,7 @@ async function restorePrevious() {
   commitProgress(true);
   render();
   toast('Previous library restored');
+  Offline.reattach();
 }
 
 /* ==========================================================================
@@ -2201,6 +2203,7 @@ function exportProgress() {
       celebrationCount: P.celebrationCount,
       fxSeed: P.fxSeed,
       playerMin: P.playerMin,
+      keepOffline: P.keepOffline,
     },
     library: lib ? { rootName: lib.rootName, scannedAt: lib.scannedAt, lessons: lib.lessons } : null,
   };
@@ -2292,6 +2295,10 @@ const ACTIONS = {
   'p-min': () => { state.progress.playerMin = !state.progress.playerMin; commitProgress(); updatePlayerUI(); },
   'speed': toggleSpeeds,
   'set-speed': (el) => setSpeed(Number(el.dataset.speed)),
+  'offline-manage': openOfflineSheet,
+  'offline-finish': saveLessonsNow,
+  'offline-enable': saveLessonsNow,
+  'offline-remove': () => { removeSavedLessons(); },
 };
 
 function onClick(e) {
@@ -2451,10 +2458,15 @@ function boot() {
   if (lsLib) { state.library = lsLib; state.boot = 'ready'; }
   derive();
   render();
-  IDB.getMany(['library', 'progress', 'libraryPrev']).then(
+  const loaded = IDB.getMany(['library', 'progress', 'libraryPrev']).then(
     (rec) => adoptStored(lsLib, lsProg, rec || {}),
     () => { state.idbOk = false; adoptStored(lsLib, lsProg, {}); }
   );
+  // Saved lesson copies are looked up right after the library is known; a play tap
+  // during this short window waits for it instead of asking for the folder.
+  state.offlineReady = loaded
+    .then(() => withTimeout(Offline.attach(), 5000))
+    .then(() => { renderOffline(); Probe.run(); }, () => {});
   registerServiceWorker();
 }
 
@@ -3774,6 +3786,7 @@ if (DEBUG) {
     state,
     get derived() { return derived; },
     FX,
+    Offline,
     ingest: (files, playId) => handleFolderFiles(Array.from(files), playId || null),
   };
 }
