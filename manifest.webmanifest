@@ -1,41 +1,26 @@
 {
   "name": "Pimsleur French",
   "short_name": "Pimsleur FR",
-  "description": "A private, offline-friendly French lesson tracker and audio player.",
-  "id": "./",
+  "description": "A private, on-device tracker for your Pimsleur French audio lessons.",
+  "lang": "en",
+  "dir": "ltr",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "display_override": [
-    "standalone",
-    "minimal-ui"
-  ],
-  "orientation": "portrait-primary",
-  "background_color": "#08101c",
-  "theme_color": "#0b1020",
-  "lang": "en-US",
+  "orientation": "portrait",
+  "background_color": "#0a1022",
+  "theme_color": "#0a1022",
   "categories": [
     "education",
-    "productivity"
+    "music"
   ],
+  "prefer_related_applications": false,
   "icons": [
     {
-      "src": "./icon-192.svg",
-      "sizes": "192x192",
+      "src": "icons/icon.svg",
+      "sizes": "any",
       "type": "image/svg+xml",
-      "purpose": "any"
-    },
-    {
-      "src": "./icon-512.svg",
-      "sizes": "512x512",
-      "type": "image/svg+xml",
-      "purpose": "any"
-    },
-    {
-      "src": "./icon-512.svg",
-      "sizes": "512x512",
-      "type": "image/svg+xml",
-      "purpose": "maskable"
+      "purpose": "any maskable"
     }
   ]
 }
