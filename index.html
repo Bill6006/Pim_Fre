@@ -187,7 +187,7 @@
           <div class="progressTrack"><div class="progressFill" id="overallBar"></div></div>
         </div>
       </div>
-      <div class="statCard"><div class="statNum" id="totalHours">0h</div><div class="statLabel">audio loaded</div></div>
+      <div class="statCard"><div class="statNum" id="totalHours">0</div><div class="statLabel">audio files loaded</div></div>
     </div>
   </section>
 
@@ -507,6 +507,7 @@
   function loadEntries(entries){
     cleanupUrls();
     cachedMode = false;
+    els.notice.style.display = '';
     els.connectBtn.textContent = '📁 Change French folder';
     currentIndex = -1;
     els.audio.pause(); els.audio.removeAttribute('src');
@@ -560,8 +561,9 @@
     els.overallText.textContent = `${done} of ${total} lesson${total===1?'':'s'} complete`;
     els.overallPct.textContent = `${pct}%`;
     els.overallBar.style.width = `${pct}%`;
-    const hours = totalDuration/3600;
-    els.totalHours.textContent = totalDuration ? (hours >= 10 ? `${Math.round(hours)}h` : `${hours.toFixed(1)}h`) : (total ? '…' : '0h');
+    // This stat is intentionally the track count, not total duration. It is instant and
+    // remains correct after a refresh even before the browser restores local-file access.
+    els.totalHours.textContent = String(total);
     document.querySelectorAll('.section').forEach(sec=>{
       const folder = sec.dataset.folder;
       const set = lessons.filter(l=>l.folder===folder);
@@ -743,7 +745,7 @@
     totalDuration = lessons.reduce((sum,l)=>sum + (Number(l.duration)||0),0);
     durationKnown = new Set(lessons.filter(l=>l.duration>0).map(l=>l.key));
     els.connectBtn.textContent = '🔓 Resume French library';
-    els.notice.innerHTML = '<b>Library restored from cache.</b> Your lessons, progress, resume points, and section layout survived the refresh. Tap an unlocked lesson to resume audio.';
+    els.notice.style.display = 'none';
     render();
     updateContinueCard();
   })();
