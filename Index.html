@@ -136,25 +136,70 @@
   .check.pop{animation:checkPop .55s cubic-bezier(.2,1.7,.3,1)}
   @keyframes checkPop{0%{transform:scale(.65) rotate(-18deg)}55%{transform:scale(1.28) rotate(8deg)}100%{transform:scale(1) rotate(0)}}
 
-  .celebrationLayer{position:fixed;inset:0;pointer-events:none;z-index:9999;overflow:hidden}
-  .fxParticle{position:absolute;left:50%;top:50%;will-change:transform,opacity;animation-fill-mode:forwards}
-  .fx-ring{width:28px;height:28px;border:4px solid var(--green);border-radius:50%;animation:ringBurst .9s ease-out forwards}
-  .fx-spark{width:8px;height:22px;border-radius:999px;background:var(--gold);transform-origin:50% 100%;animation:sparkBurst .95s ease-out forwards}
-  .fx-dot{width:10px;height:10px;border-radius:50%;background:var(--blue2);animation:dotBurst 1s ease-out forwards}
-  .fx-star{font-size:24px;line-height:1;animation:starBurst 1.05s cubic-bezier(.18,.8,.28,1) forwards}
-  .fx-confetti{width:9px;height:18px;border-radius:3px;background:var(--red);animation:confettiBurst 1.25s cubic-bezier(.15,.7,.25,1) forwards}
-  .fx-wave{width:12px;height:12px;border-radius:50%;background:var(--green);animation:waveBurst 1s ease-out forwards}
-  .fx-orbit{width:9px;height:9px;border-radius:50%;background:var(--gold);animation:orbitBurst 1.15s ease-out forwards}
-  .fx-ribbon{width:7px;height:34px;border-radius:8px;background:linear-gradient(var(--blue),var(--green));animation:ribbonBurst 1.2s ease-out forwards}
-  @keyframes ringBurst{0%{transform:translate(-50%,-50%) scale(.25);opacity:1}100%{transform:translate(-50%,-50%) scale(7);opacity:0}}
-  @keyframes sparkBurst{0%{transform:translate(-50%,-50%) rotate(var(--r)) translateY(-8px) scaleY(.25);opacity:1}100%{transform:translate(-50%,-50%) rotate(var(--r)) translateY(-150px) scaleY(1);opacity:0}}
-  @keyframes dotBurst{0%{transform:translate(-50%,-50%) translate(0,0) scale(.5);opacity:1}100%{transform:translate(-50%,-50%) translate(var(--x),var(--y)) scale(1.25);opacity:0}}
-  @keyframes starBurst{0%{transform:translate(-50%,-50%) translate(0,0) rotate(0) scale(.2);opacity:0}20%{opacity:1}100%{transform:translate(-50%,-50%) translate(var(--x),var(--y)) rotate(var(--rot)) scale(1.2);opacity:0}}
+  .celebrationLayer{position:fixed;inset:0;pointer-events:none;z-index:9999;overflow:hidden;perspective:900px}
+  .fxParticle{position:absolute;left:50%;top:50%;will-change:transform,opacity,filter;animation-fill-mode:forwards;user-select:none}
+  .fx-ring{width:30px;height:30px;border:4px solid var(--green);border-radius:50%;animation:ringBurst 1s ease-out forwards}
+  .fx-spark{width:8px;height:26px;border-radius:999px;background:var(--gold);transform-origin:50% 100%;animation:sparkBurst 1.05s ease-out forwards}
+  .fx-dot{width:11px;height:11px;border-radius:50%;background:var(--blue2);animation:dotBurst 1.05s ease-out forwards}
+  .fx-star{font-size:26px;line-height:1;animation:starBurst 1.15s cubic-bezier(.18,.8,.28,1) forwards}
+  .fx-confetti{width:10px;height:20px;border-radius:3px;background:var(--red);animation:confettiBurst 1.35s cubic-bezier(.15,.7,.25,1) forwards}
+  .fx-wave{width:13px;height:13px;border-radius:50%;background:var(--green);animation:waveBurst 1.05s ease-out forwards}
+  .fx-orbit{width:10px;height:10px;border-radius:50%;background:var(--gold);animation:orbitBurst 1.25s ease-out forwards}
+  .fx-ribbon{width:8px;height:38px;border-radius:8px;background:linear-gradient(var(--blue),var(--green));animation:ribbonBurst 1.3s ease-out forwards}
+  .fx-emoji{font-size:30px;filter:drop-shadow(0 5px 8px rgba(0,0,0,.3));animation:emojiLaunch 1.45s cubic-bezier(.12,.72,.18,1) forwards}
+  .fx-fall{font-size:30px;top:-60px!important;animation:weirdRain 1.65s cubic-bezier(.18,.6,.25,1) forwards}
+  .fx-word{font-weight:1000;letter-spacing:.05em;color:#fff;text-shadow:0 0 18px rgba(95,168,255,.85);animation:wordWarp 1.25s cubic-bezier(.15,.8,.22,1) forwards}
+  .fx-spiral{font-size:24px;animation:spiralSuck 1.35s cubic-bezier(.2,.8,.2,1) forwards}
+  .fx-bubble{width:22px;height:22px;border:2px solid rgba(255,255,255,.72);border-radius:50%;background:rgba(95,168,255,.12);box-shadow:inset 3px 3px 8px rgba(255,255,255,.28);animation:bubbleFloat 1.55s ease-out forwards}
+  .fx-beam{width:12px;height:150px;top:-160px!important;border-radius:999px;background:linear-gradient(to bottom,transparent,rgba(139,192,255,.9),transparent);filter:blur(1px);animation:beamDrop 1.05s ease-out forwards}
+  .fx-shard{width:16px;height:16px;clip-path:polygon(50% 0,100% 100%,0 72%);background:var(--blue2);animation:shardBlast 1.2s cubic-bezier(.1,.72,.22,1) forwards}
+  .fx-pixel{width:13px;height:13px;border-radius:2px;background:var(--green);animation:pixelBlast 1.1s steps(7,end) forwards}
+  .fx-ghost{font-size:32px;animation:ghostRise 1.55s ease-out forwards}
+  .fx-eye{font-size:28px;animation:eyeScatter 1.25s cubic-bezier(.16,.78,.2,1) forwards}
+  .fx-lightning{font-size:34px;filter:drop-shadow(0 0 10px #fff);animation:lightningZap .95s steps(5,end) forwards}
+  .fx-croissant{font-size:32px;animation:croissantToss 1.45s cubic-bezier(.2,.75,.18,1) forwards}
+  .fx-duck{font-size:30px;animation:duckStampede 1.5s cubic-bezier(.15,.65,.2,1) forwards}
+  .fx-cheese{font-size:31px;animation:cheeseBounce 1.45s cubic-bezier(.2,.9,.25,1) forwards}
+  .fx-ufo{font-size:35px;animation:ufoAbduct 1.55s cubic-bezier(.16,.78,.22,1) forwards}
+  .fx-frog{font-size:31px;animation:frogHop 1.5s cubic-bezier(.22,.78,.18,1) forwards}
+  .fx-music{font-size:27px;animation:musicSwirl 1.45s cubic-bezier(.15,.78,.2,1) forwards}
+  .fx-crown{font-size:29px;animation:crownPop 1.25s cubic-bezier(.12,.85,.2,1) forwards}
+  .fx-screenPulse{position:fixed;inset:0;pointer-events:none;animation:screenPulse .72s ease-out forwards}
+  .fx-wobble{animation:pageWobble .48s cubic-bezier(.2,.8,.2,1)}
+  .fx-invert{animation:pageInvert .65s ease-out}
+  @keyframes ringBurst{0%{transform:translate(-50%,-50%) scale(.2);opacity:1}100%{transform:translate(-50%,-50%) scale(8);opacity:0}}
+  @keyframes sparkBurst{0%{transform:translate(-50%,-50%) rotate(var(--r)) translateY(-6px) scaleY(.2);opacity:1}100%{transform:translate(-50%,-50%) rotate(var(--r)) translateY(-190px) scaleY(1);opacity:0}}
+  @keyframes dotBurst{0%{transform:translate(-50%,-50%) translate(0,0) scale(.45);opacity:1}100%{transform:translate(-50%,-50%) translate(var(--x),var(--y)) scale(1.5);opacity:0}}
+  @keyframes starBurst{0%{transform:translate(-50%,-50%) translate(0,0) rotate(0) scale(.15);opacity:0}18%{opacity:1}100%{transform:translate(-50%,-50%) translate(var(--x),var(--y)) rotate(var(--rot)) scale(1.35);opacity:0}}
   @keyframes confettiBurst{0%{transform:translate(-50%,-50%) translate(0,0) rotate(0);opacity:1}100%{transform:translate(-50%,-50%) translate(var(--x),var(--y)) rotate(var(--rot));opacity:0}}
-  @keyframes waveBurst{0%{transform:translate(-50%,-50%) rotate(var(--r)) translateX(0) scale(1);opacity:1}45%{opacity:1}100%{transform:translate(-50%,-50%) rotate(var(--r)) translateX(170px) scale(.25);opacity:0}}
-  @keyframes orbitBurst{0%{transform:translate(-50%,-50%) rotate(var(--r)) translateX(24px) scale(.5);opacity:1}100%{transform:translate(-50%,-50%) rotate(calc(var(--r) + 460deg)) translateX(150px) scale(1.1);opacity:0}}
-  @keyframes ribbonBurst{0%{transform:translate(-50%,-50%) translate(0,0) rotate(var(--rot)) scaleY(.2);opacity:1}100%{transform:translate(-50%,-50%) translate(var(--x),var(--y)) rotate(calc(var(--rot) + 360deg)) scaleY(1);opacity:0}}
-  @media (prefers-reduced-motion: reduce){.fxParticle,.check.pop{animation-duration:.01ms!important}.collapseBtn{transition:none}}
+  @keyframes waveBurst{0%{transform:translate(-50%,-50%) rotate(var(--r)) translateX(0) scale(1);opacity:1}45%{opacity:1}100%{transform:translate(-50%,-50%) rotate(var(--r)) translateX(210px) scale(.18);opacity:0}}
+  @keyframes orbitBurst{0%{transform:translate(-50%,-50%) rotate(var(--r)) translateX(18px) scale(.45);opacity:1}100%{transform:translate(-50%,-50%) rotate(calc(var(--r) + 620deg)) translateX(190px) scale(1.1);opacity:0}}
+  @keyframes ribbonBurst{0%{transform:translate(-50%,-50%) translate(0,0) rotate(var(--rot)) scaleY(.2);opacity:1}100%{transform:translate(-50%,-50%) translate(var(--x),var(--y)) rotate(calc(var(--rot) + 540deg)) scaleY(1);opacity:0}}
+  @keyframes emojiLaunch{0%{transform:translate(-50%,-50%) scale(.15) rotate(0);opacity:0}15%{opacity:1}72%{opacity:1}100%{transform:translate(-50%,-50%) translate(var(--x),var(--y)) scale(1.25) rotate(var(--rot));opacity:0}}
+  @keyframes weirdRain{0%{transform:translateX(var(--x)) translateY(-30px) rotate(0);opacity:0}12%{opacity:1}100%{transform:translateX(var(--x)) translateY(calc(100vh + 120px)) rotate(var(--rot));opacity:0}}
+  @keyframes wordWarp{0%{transform:translate(-50%,-50%) scale(.15) rotate(var(--rot));opacity:0;filter:blur(8px)}28%{opacity:1;filter:blur(0)}100%{transform:translate(-50%,-50%) translate(var(--x),var(--y)) scale(1.8) rotate(0);opacity:0;filter:blur(2px)}}
+  @keyframes spiralSuck{0%{transform:translate(-50%,-50%) rotate(var(--r)) translateX(210px) scale(1.3);opacity:0}15%{opacity:1}100%{transform:translate(-50%,-50%) rotate(calc(var(--r) + 900deg)) translateX(0) scale(.05);opacity:0}}
+  @keyframes bubbleFloat{0%{transform:translate(-50%,-50%) translate(0,0) scale(.25);opacity:0}16%{opacity:1}100%{transform:translate(-50%,-50%) translate(var(--x),var(--y)) scale(1.8);opacity:0}}
+  @keyframes beamDrop{0%{transform:translateX(var(--x)) translateY(-10px) scaleY(.1);opacity:0}24%{opacity:1}100%{transform:translateX(var(--x)) translateY(calc(100vh + 220px)) scaleY(1.2);opacity:0}}
+  @keyframes shardBlast{0%{transform:translate(-50%,-50%) scale(.1) rotate(0);opacity:1}100%{transform:translate(-50%,-50%) translate(var(--x),var(--y)) scale(1.1) rotate(var(--rot));opacity:0}}
+  @keyframes pixelBlast{0%{transform:translate(-50%,-50%) scale(.2);opacity:1}100%{transform:translate(-50%,-50%) translate(var(--x),var(--y)) scale(1.4);opacity:0}}
+  @keyframes ghostRise{0%{transform:translate(-50%,-50%) translate(0,30px) scale(.4);opacity:0}20%{opacity:1}100%{transform:translate(-50%,-50%) translate(var(--x),calc(var(--y) - 150px)) scale(1.25) rotate(var(--rot));opacity:0}}
+  @keyframes eyeScatter{0%{transform:translate(-50%,-50%) scale(.2);opacity:0}20%{opacity:1}55%{transform:translate(-50%,-50%) translate(calc(var(--x)*.45),calc(var(--y)*.45)) scale(1.25)}100%{transform:translate(-50%,-50%) translate(var(--x),var(--y)) scale(.5) rotate(var(--rot));opacity:0}}
+  @keyframes lightningZap{0%{transform:translate(-50%,-50%) translate(0,0) scale(.2);opacity:0}20%{opacity:1}40%{transform:translate(-50%,-50%) translate(var(--x),calc(var(--y)*.35)) scale(1.4)}100%{transform:translate(-50%,-50%) translate(var(--x),var(--y)) scale(.3);opacity:0}}
+  @keyframes croissantToss{0%{transform:translate(-50%,-50%) scale(.2) rotate(0);opacity:0}18%{opacity:1}100%{transform:translate(-50%,-50%) translate(var(--x),var(--y)) scale(1.25) rotate(var(--rot));opacity:0}}
+  @keyframes duckStampede{0%{transform:translate(-50%,-50%) translateX(-55vw) scale(.8);opacity:0}12%{opacity:1}100%{transform:translate(-50%,-50%) translateX(65vw) translateY(var(--y)) scale(1.2) rotate(var(--rot));opacity:0}}
+  @keyframes cheeseBounce{0%{transform:translate(-50%,-50%) translate(0,0) scale(.25);opacity:0}18%{opacity:1}55%{transform:translate(-50%,-50%) translate(calc(var(--x)*.5),calc(var(--y)*.25)) scale(1.4) rotate(180deg)}100%{transform:translate(-50%,-50%) translate(var(--x),var(--y)) scale(.85) rotate(var(--rot));opacity:0}}
+  @keyframes ufoAbduct{0%{transform:translate(-50%,-50%) translate(var(--x),120px) scale(.4);opacity:0}20%{opacity:1}55%{transform:translate(-50%,-50%) translate(calc(var(--x)*.4),-45px) scale(1.25)}100%{transform:translate(-50%,-50%) translate(0,-70vh) scale(.2) rotate(var(--rot));opacity:0}}
+  @keyframes frogHop{0%{transform:translate(-50%,-50%) translate(0,20px) scale(.35);opacity:0}14%{opacity:1}45%{transform:translate(-50%,-50%) translate(calc(var(--x)*.48),calc(var(--y)*.55 - 70px)) scale(1.35) rotate(-18deg)}72%{transform:translate(-50%,-50%) translate(calc(var(--x)*.72),calc(var(--y)*.78 + 18px)) scale(.95) rotate(12deg)}100%{transform:translate(-50%,-50%) translate(var(--x),var(--y)) scale(.6);opacity:0}}
+  @keyframes musicSwirl{0%{transform:translate(-50%,-50%) rotate(var(--r)) translateX(18px) scale(.2);opacity:0}18%{opacity:1}100%{transform:translate(-50%,-50%) rotate(calc(var(--r) + 720deg)) translateX(210px) scale(1.25);opacity:0}}
+  @keyframes crownPop{0%{transform:translate(-50%,-50%) scale(.1) rotate(-25deg);opacity:0}28%{transform:translate(-50%,-50%) scale(1.5) rotate(12deg);opacity:1}100%{transform:translate(-50%,-50%) translate(var(--x),var(--y)) scale(.7) rotate(var(--rot));opacity:0}}
+  @keyframes screenPulse{0%{opacity:0;background:radial-gradient(circle at var(--px) var(--py),rgba(255,255,255,.45),rgba(95,168,255,.2) 22%,transparent 58%)}35%{opacity:1}100%{opacity:0;background:radial-gradient(circle at var(--px) var(--py),rgba(95,224,172,.35),rgba(255,116,126,.08) 42%,transparent 76%)}}
+  @keyframes pageWobble{0%,100%{transform:translateX(0) rotate(0)}20%{transform:translateX(-4px) rotate(-.3deg)}40%{transform:translateX(5px) rotate(.35deg)}60%{transform:translateX(-3px) rotate(-.18deg)}80%{transform:translateX(2px) rotate(.1deg)}}
+  @keyframes pageInvert{0%,100%{filter:none}35%{filter:hue-rotate(145deg) saturate(1.35)}70%{filter:hue-rotate(285deg) saturate(1.55)}}
+  @media (prefers-reduced-motion: reduce){
+    .fxParticle,.check.pop,.fx-screenPulse,.fx-wobble,.fx-invert{animation-duration:.01ms!important}
+    .collapseBtn{transition:none}
+  }
   .empty{padding:48px 22px;text-align:center;border:1px solid var(--line);background:rgba(255,255,255,.035);border-radius:22px;color:var(--muted)}
   .emptyIcon{font-size:2.4rem;margin-bottom:9px}.empty h3{color:var(--text);margin:0 0 7px}.empty p{margin:0;line-height:1.5}
   .bonusLabel{margin:26px 4px 8px;color:#cdd9e9;font-size:.84rem;font-weight:900;letter-spacing:.08em;text-transform:uppercase}
@@ -389,35 +434,131 @@
     state.celebrationCount = Number(state.celebrationCount || 0) + 1;
     const n = state.celebrationCount;
     saveState();
+
     const rect = anchorEl?.getBoundingClientRect?.();
     const cx = rect ? rect.left + rect.width/2 : innerWidth/2;
     const cy = rect ? rect.top + rect.height/2 : innerHeight/2;
     const rand = mulberry32(7331 + n * 7919);
-    const variant = (n - 1) % 8;
-    const types = ['ring','spark','dot','star','confetti','wave','orbit','ribbon'];
-    const type = types[variant];
-    const count = type === 'ring' ? 3 : (type === 'star' ? 13 : 20);
-    const glyphs = ['✦','★','✧','◆','✶'];
-    for(let i=0;i<count;i++){
-      const p = document.createElement('span');
-      p.className = `fxParticle fx-${type}`;
-      p.style.left = `${cx}px`; p.style.top = `${cy}px`;
-      const ang = (i / Math.max(1,count)) * Math.PI * 2 + rand()*.4;
-      const dist = 70 + rand()*125;
-      p.style.setProperty('--x', `${Math.cos(ang)*dist}px`);
-      p.style.setProperty('--y', `${Math.sin(ang)*dist - 20}px`);
-      p.style.setProperty('--r', `${Math.round(ang*180/Math.PI)}deg`);
-      p.style.setProperty('--rot', `${Math.round((rand()-.5)*620)}deg`);
-      p.style.animationDelay = `${(rand()*.12).toFixed(3)}s`;
-      if(type==='star') p.textContent = glyphs[(i+n)%glyphs.length];
-      if(type==='confetti' || type==='dot' || type==='spark' || type==='orbit'){
-        const palette=['var(--blue)','var(--blue2)','var(--green)','var(--gold)','var(--red)'];
-        p.style.background = palette[(i+n)%palette.length];
+    const palette=['var(--blue)','var(--blue2)','var(--green)','var(--gold)','var(--red)','#d59cff','#8ff7ff','#fff'];
+    const glyphSets = {
+      stars:['✦','★','✧','◆','✶','✹','✺'],
+      french:['🥐','🇫🇷','🧀','🥖','☕','🗼'],
+      odd:['👁️','🛸','👻','🐸','🦆','🌀','⚡','🪩'],
+      music:['♪','♫','♬','♩','🎵','🎶'],
+      royal:['👑','✨','💎','🏆','⭐']
+    };
+
+    // 24 base concepts, then seeded parameters make every occurrence visually different.
+    const variants = [
+      'megaRing','sparkWheel','starNova','confettiCannon','orbitGalaxy','ribbonStorm',
+      'croissantExplosion','duckStampede','ufoAbduction','frogArmy','eyeballSwarm','ghostLift',
+      'baguetteRain','cheeseBounce','ouiWarp','musicVortex','bubbleUniverse','pixelGlitch',
+      'lightningStorm','portalSuck','crownBurst','emojiMeteor','laserRain','everythingBagel'
+    ];
+    const variant = variants[(n - 1) % variants.length];
+
+    const add = (type, count, glyphs=null, setup=null) => {
+      for(let i=0;i<count;i++){
+        const p=document.createElement('span');
+        p.className=`fxParticle fx-${type}`;
+        p.style.left=`${cx}px`; p.style.top=`${cy}px`;
+        const ang=(i/Math.max(1,count))*Math.PI*2 + rand()*.7;
+        const dist=85 + rand()*185;
+        const x=Math.cos(ang)*dist;
+        const y=Math.sin(ang)*dist - (20 + rand()*45);
+        p.style.setProperty('--x',`${Math.round(x)}px`);
+        p.style.setProperty('--y',`${Math.round(y)}px`);
+        p.style.setProperty('--r',`${Math.round(ang*180/Math.PI)}deg`);
+        p.style.setProperty('--rot',`${Math.round((rand()-.5)*980)}deg`);
+        p.style.animationDelay=`${(rand()*.16).toFixed(3)}s`;
+        p.style.backgroundColor = palette[(i+n)%palette.length];
+        if(glyphs){ p.textContent=glyphs[(i+n)%glyphs.length]; p.style.background='none'; }
+        if(setup) setup(p,i,rand);
+        layer.appendChild(p);
+        setTimeout(()=>p.remove(),2200);
       }
-      layer.appendChild(p);
-      setTimeout(()=>p.remove(), 1500);
+    };
+
+    const pulse = (wobble=false,invert=false) => {
+      const flash=document.createElement('div');
+      flash.className='fx-screenPulse';
+      flash.style.setProperty('--px',`${cx}px`);
+      flash.style.setProperty('--py',`${cy}px`);
+      layer.appendChild(flash);
+      setTimeout(()=>flash.remove(),900);
+      const target=document.querySelector('.shell');
+      if(target && wobble){ target.classList.remove('fx-wobble'); void target.offsetWidth; target.classList.add('fx-wobble'); setTimeout(()=>target.classList.remove('fx-wobble'),650); }
+      if(target && invert){ target.classList.remove('fx-invert'); void target.offsetWidth; target.classList.add('fx-invert'); setTimeout(()=>target.classList.remove('fx-invert'),850); }
+    };
+
+    switch(variant){
+      case 'megaRing':
+        add('ring',5,null,(p,i)=>{p.style.borderColor=palette[(i+n)%palette.length];p.style.animationDelay=`${i*.07}s`;});
+        add('dot',22); pulse(true); break;
+      case 'sparkWheel':
+        add('spark',30); add('star',9,glyphSets.stars); break;
+      case 'starNova':
+        add('star',28,glyphSets.stars); add('ring',2); pulse(); break;
+      case 'confettiCannon':
+        add('confetti',44); add('ribbon',12); pulse(true); break;
+      case 'orbitGalaxy':
+        add('orbit',32); add('star',14,glyphSets.stars); add('spiral',7,['🌀']); break;
+      case 'ribbonStorm':
+        add('ribbon',34); add('dot',20); pulse(); break;
+      case 'croissantExplosion':
+        add('croissant',24,['🥐']); add('star',11,['✨','✦']); pulse(true); break;
+      case 'duckStampede':
+        add('duck',19,['🦆'],(p,i)=>{p.style.top=`${Math.round(cy-130+rand()*260)}px`;p.style.animationDelay=`${i*.035}s`;});
+        pulse(true); break;
+      case 'ufoAbduction':
+        add('ufo',12,['🛸']); add('beam',9,null,(p)=>{p.style.left=`${Math.round(rand()*100)}vw`;}); pulse(false,true); break;
+      case 'frogArmy':
+        add('frog',26,['🐸']); add('bubble',14); pulse(true); break;
+      case 'eyeballSwarm':
+        add('eye',31,['👁️']); add('spiral',9,['🌀']); pulse(false,true); break;
+      case 'ghostLift':
+        add('ghost',24,['👻']); add('bubble',18); break;
+      case 'baguetteRain':
+        add('fall',26,['🥖'],(p)=>{p.style.left=`${Math.round(rand()*100)}vw`;p.style.setProperty('--x','0px');}); pulse(); break;
+      case 'cheeseBounce':
+        add('cheese',24,['🧀']); add('star',8,['✨']); pulse(true); break;
+      case 'ouiWarp':
+        add('word',15,['OUI!','BRAVO!','BIEN!','ÇA VA!'],(p,i)=>{p.style.fontSize=`${18+Math.round(rand()*18)}px`;});
+        pulse(false,true); break;
+      case 'musicVortex':
+        add('music',34,glyphSets.music); add('orbit',16); break;
+      case 'bubbleUniverse':
+        add('bubble',42,null,(p,i)=>{const z=9+rand()*26;p.style.width=`${z}px`;p.style.height=`${z}px`;}); pulse(); break;
+      case 'pixelGlitch':
+        add('pixel',52,null,(p)=>{p.style.setProperty('--x',`${Math.round((rand()-.5)*innerWidth*.9)}px`);p.style.setProperty('--y',`${Math.round((rand()-.5)*innerHeight*.7)}px`);});
+        pulse(false,true); break;
+      case 'lightningStorm':
+        add('lightning',22,['⚡']); add('spark',18); pulse(true,true); break;
+      case 'portalSuck':
+        add('spiral',34,['🌀','✦','•']); add('ring',4); pulse(false,true); break;
+      case 'crownBurst':
+        add('crown',22,glyphSets.royal); add('confetti',26); pulse(); break;
+      case 'emojiMeteor':
+        add('emoji',34,glyphSets.odd); add('spark',14); pulse(true); break;
+      case 'laserRain':
+        add('beam',18,null,(p)=>{p.style.left=`${Math.round(rand()*100)}vw`;p.style.background=`linear-gradient(to bottom,transparent,${palette[Math.floor(rand()*palette.length)]},transparent)`;});
+        add('lightning',10,['⚡']); pulse(false,true); break;
+      case 'everythingBagel':
+        add('emoji',18,[...glyphSets.french,...glyphSets.odd,...glyphSets.royal]);
+        add('confetti',26); add('orbit',18); add('ring',3); add('music',12,glyphSets.music); pulse(true,true); break;
     }
-    if(anchorEl){ anchorEl.classList.remove('pop'); void anchorEl.offsetWidth; anchorEl.classList.add('pop'); }
+
+    // Every completion also gets a small seeded accent, so even when the 24 concepts cycle,
+    // the exact pattern, positions, delays, rotation and palette never repeat in the same way.
+    if(n % 3 === 0) add('star',6,['✨','✦','💫']);
+    if(n % 5 === 0) add('word',3,['MAGNIFIQUE!','ENCORE!','OUI!']);
+    if(n % 7 === 0) add('croissant',7,['🥐']);
+
+    if(anchorEl){
+      anchorEl.classList.remove('pop');
+      void anchorEl.offsetWidth;
+      anchorEl.classList.add('pop');
+    }
   }
   function completeLesson(key, anchorEl, fromAudio=false){
     const i = lessons.findIndex(l => l.key === key);
